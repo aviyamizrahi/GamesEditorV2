@@ -1,0 +1,1107 @@
+@page "/EditGame/{gameIdToEdit:int}"
+@attribute [Authorize]
+@using AuthTemplate.Shared.CheckDTOs
+@using AuthTemplate.Shared.Games
+@using AuthTemplate.Shared.EditGameContentDTOs
+@inject HttpClient Http
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+
+<head>
+    <title>עריכת משחק - איקס מיון</title>
+</head>
+
+<style>
+    .selected-category {
+        border: 2px solid blue;
+        background-color: #f0f4ff;
+    }
+</style>
+
+<div class="head-of-page">
+    @if (String.IsNullOrWhiteSpace(displayName))
+    {
+        <h1>עריכת משחק</h1>
+    }
+    else
+    {
+        <h1>עריכת משחק ״@displayName״</h1>
+    }
+    <div class="btns-wrapper">
+        @if (gameStatus.IsPublish)
+        {
+            <Button Variant="primary" Text="ביטול פרסום" OnClick="UnpublishGame"></Button>
+        }
+        else
+        {
+            <Tooltip Text="@(!gameStatus.CanPublish ? "המשחק לא עומד בתנאי הפרסום" : "")" MaxWidth="200">
+                <Button Variant="primary" Text="פרסום משחק" OnClick="() => showPublishPopup = true"
+                        Disabled="@(!gameStatus.CanPublish || contentChanged || canSave)">
+                </Button>
+            </Tooltip>
+        }
+
+        <Button Variant="secondery" Text="חזרה למשחקים שלי" OnClick="HandleBackNavigation"></Button>
+        @* הכפתור יהיה פעיל רק במידה ומשחק חדש נשמר ויש לו מספר id בבסיס הנתונים *@
+
+    </div>
+</div>
+
+
+@* ──────────────── הגדרות משחק ───────────────── *@
+
+<AccordionSection Title="הגדרות כלליות" IsOpen="@isSettingsOpen" UnsavedChanges="@canSave">
+    <HeaderButtons>
+        <div class="btns-wrapper">
+            <Button Type="submit"
+                    Text="שמירה"
+                    Variant="primary"
+                    Form="settings-form"
+                    Disabled="@(!canSave)"/>
+            <Button Text="ביטול שינויים"
+                    Variant="secondery"
+                    Disabled="@(!canSave || gameToEdit.ID == 0)"
+                    OnClick="CancelChanges"/>
+        </div>
+        
+    </HeaderButtons>
+    <ChildContent>
+        <div class="settings-content">
+            <EditForm Model="gameToEdit" OnValidSubmit="SaveGameSettings" id="settings-form">
+                <DataAnnotationsValidator/>
+                <div class="settings-right">
+                    <div>
+                        <label>
+                            <span class="input-name">שם המשחק:</span>
+                            <CustomInputText @bind-Value="gameToEdit.GameName"
+                                             placeholder="שם משחק..."
+                                             minLength="1"
+                                             maxLength="40"
+                                             @bind-Value:after="CheckCanSave"/>
+                        </label>
+                        <ValidationMessage For="@(() => gameToEdit.GameName)"/>
+                    </div>
+                    <br/>
+                    <div>
+                        @* לא ניתן היה לשלוט בחיצים של תיבת מספר רגילה לכן בנינו כפתורים שמדמים את החיצים והסרנו את החיצים מהתיבת מספר *@
+                        <label class="input-name">זמן למיון פריט בכל תור</label>
+                        <div class="time-section-wrapper">
+                            <div class="number-input-wrapper @(noLimit ? "disabled" : "")">
+                                <div class="number-arrows">
+                                    <button type="button"
+                                            @onclick="() => { if (gameToEdit.RoundTime < 60) { gameToEdit.RoundTime += 5; CheckCanSave(); } }"
+                                            disabled="@(gameToEdit.RoundTime >= 60 || noLimit)">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M7 14L12 9L17 14" stroke="black" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button"
+                                            @onclick="() => { if (gameToEdit.RoundTime > 20) { gameToEdit.RoundTime -= 5; CheckCanSave(); } }"
+                                            disabled="@(gameToEdit.RoundTime <= 20 || noLimit)">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M7 10L12 15L17 10" stroke="black" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <InputNumber @bind-Value="gameToEdit.RoundTime"
+                                             step="5"
+                                             min="20"
+                                             max="60"
+                                             disabled="@noLimit"
+                                             @bind-Value:after="CheckCanSave"/>
+                            </div>
+                            <b> או </b>
+                            <label>
+                                <InputCheckbox class="settings-checkbox" @bind-Value="noLimit" @bind-Value:after="OnNoLimitAndCheckSave"/>
+                                ללא הגבלה
+                            </label>
+                        </div>
+
+                    </div>
+                    <br/>
+                </div>
+                
+                <div class="settings-left">
+                    <div>
+                        <label>
+                            <span class="input-name">הנחיות העורך:</span>
+                            <CustomInputTextArea @bind-Value="gameToEdit.Instructions"
+                                                 placeholder="כתבו הנחיה משלכם"
+                                                 minLength="1"
+                                                 maxLength="55"
+                                                 @bind-Value:after="CheckCanSave"/>
+                        </label>
+                    </div>
+                    <ValidationMessage For="@(() => gameToEdit.Instructions)"/>
+                    <p class="msg settings-msg">@msg</p>
+                </div>
+            </EditForm>
+        </div>
+        
+    </ChildContent>
+</AccordionSection>
+
+
+@* ───────────── עריכת התוכן ───────────────── *@
+
+<AccordionSection Title="עריכת תוכן" Disabled="@(gameToEdit.ID == 0)" UnsavedChanges="@contentChanged" AdditionalClass="edit-content">
+    <HeaderButtons>
+        <div class="btns-wrapper">
+            <div class="publish-conditions">
+            <span>
+                @if (hasMinCategories)
+                {
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="12" fill="#8AC07F"/>
+                        <path d="M10.6127 18C10.2507 18 9.98817 17.8546 9.7398 17.5494L6.26257 13.1302C6.07806 12.8976 6 12.6869 6 12.4615C6 11.9382 6.37611 11.5675 6.89415 11.5675C7.20639 11.5675 7.42637 11.6838 7.63217 11.96L10.5843 15.8122L16.3323 6.47244C16.5523 6.12356 16.7652 6 17.12 6C17.631 6 18 6.36342 18 6.87947C18 7.07571 17.9361 7.28649 17.7871 7.51908L11.4855 17.5276C11.2868 17.8401 10.9888 18 10.6127 18Z" fill="white"/>
+                    </svg>
+                }
+                else
+                {
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="12" fill="#FD8177" fill-opacity="0.7"/>
+                        <path d="M6.98528 16.956C6.78929 16.76 6.69133 16.5202 6.69142 16.2365C6.69151 15.9529 6.78961 15.713 6.98573 15.5169L10.5346 11.968L6.99421 8.42766C6.79822 8.23167 6.69818 7.99394 6.6941 7.71446C6.69002 7.42664 6.78812 7.18258 6.98841 6.9823C7.18869 6.78201 7.43066 6.68599 7.71431 6.69425C7.99796 6.69416 8.23778 6.79211 8.43378 6.9881L11.9741 10.5285L15.523 6.97962C15.7191 6.7835 15.9569 6.68749 16.2364 6.69157C16.52 6.69148 16.7598 6.78943 16.9558 6.98543C17.156 7.18559 17.256 7.42749 17.2559 7.71115C17.26 7.99062 17.164 8.22842 16.9679 8.42454L13.4191 11.9734L16.9594 15.5137C17.1554 15.7097 17.2534 15.9496 17.2533 16.2332C17.2574 16.5127 17.1593 16.7526 16.959 16.9529C16.7587 17.1531 16.5167 17.2533 16.2331 17.2534C15.9536 17.2493 15.7158 17.1493 15.5198 16.9533L11.9795 13.4129L8.43065 16.9618C8.23453 17.1579 7.99465 17.256 7.711 17.2561C7.42735 17.2562 7.18544 17.1561 6.98528 16.956Z" fill="#F6F2EB"/>
+                    </svg>
+                }
+                מינימום 3 קטגוריות
+            </span>
+                <span>
+                @if (hasMinItemsPerCategory)
+                    {
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="12" fill="#8AC07F"/>
+                            <path d="M10.6127 18C10.2507 18 9.98817 17.8546 9.7398 17.5494L6.26257 13.1302C6.07806 12.8976 6 12.6869 6 12.4615C6 11.9382 6.37611 11.5675 6.89415 11.5675C7.20639 11.5675 7.42637 11.6838 7.63217 11.96L10.5843 15.8122L16.3323 6.47244C16.5523 6.12356 16.7652 6 17.12 6C17.631 6 18 6.36342 18 6.87947C18 7.07571 17.9361 7.28649 17.7871 7.51908L11.4855 17.5276C11.2868 17.8401 10.9888 18 10.6127 18Z" fill="white"/>
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="12" fill="#FD8177" fill-opacity="0.7"/>
+                            <path d="M6.98528 16.956C6.78929 16.76 6.69133 16.5202 6.69142 16.2365C6.69151 15.9529 6.78961 15.713 6.98573 15.5169L10.5346 11.968L6.99421 8.42766C6.79822 8.23167 6.69818 7.99394 6.6941 7.71446C6.69002 7.42664 6.78812 7.18258 6.98841 6.9823C7.18869 6.78201 7.43066 6.68599 7.71431 6.69425C7.99796 6.69416 8.23778 6.79211 8.43378 6.9881L11.9741 10.5285L15.523 6.97962C15.7191 6.7835 15.9569 6.68749 16.2364 6.69157C16.52 6.69148 16.7598 6.78943 16.9558 6.98543C17.156 7.18559 17.256 7.42749 17.2559 7.71115C17.26 7.99062 17.164 8.22842 16.9679 8.42454L13.4191 11.9734L16.9594 15.5137C17.1554 15.7097 17.2534 15.9496 17.2533 16.2332C17.2574 16.5127 17.1593 16.7526 16.959 16.9529C16.7587 17.1531 16.5167 17.2533 16.2331 17.2534C15.9536 17.2493 15.7158 17.1493 15.5198 16.9533L11.9795 13.4129L8.43065 16.9618C8.23453 17.1579 7.99465 17.256 7.711 17.2561C7.42735 17.2562 7.18544 17.1561 6.98528 16.956Z" fill="#F6F2EB"/>
+                        </svg>
+                    }
+                    מינימום 6 פריטים לקטגוריה
+            </span>
+            </div>
+            <Tooltip Text="@(hasItemsInEmptyCategory ? "לא ניתן לשמור פריטים בתוך קטגוריה בלי תוכן" : "")" MaxWidth="150">
+                <Button Variant="primary"
+                        Text="שמירת שינויים"
+                        Icon="@("<svg width=\"18\" height=\"18\" viewBox=\"0 0 18 18\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<g clip-path=\"url(#clip0_8_18374)\">\n<path d=\"M1.69048 0H14.358C14.4236 0.0373453 14.4555 0.0578376 14.5094 0.110929C14.7754 0.372725 15.0387 0.641718 15.3011 0.906926L16.78 2.39878L17.5426 3.16739C17.6777 3.30345 17.911 3.51103 18 3.66747V16.2927C17.9584 16.4104 17.9484 16.5457 17.908 16.67C17.7157 17.2625 17.2354 17.7393 16.639 17.9202C16.5641 17.9429 16.3783 17.9691 16.3189 18H1.69897C1.64297 17.9743 1.39598 17.93 1.30046 17.8968C0.782216 17.7166 0.317113 17.2799 0.125183 16.7616C0.100919 16.6968 0.0807063 16.6304 0.0646629 16.563C0.0501441 16.5006 0.0270241 16.3614 0 16.3099V1.68823C0.0236935 1.64331 0.0537291 1.48177 0.0694278 1.41917C0.0942811 1.32124 0.128097 1.22581 0.170448 1.13408C0.398485 0.646234 0.787467 0.284984 1.29617 0.104614C1.42369 0.0593972 1.57504 0.0452961 1.69048 0ZM3.51331 17.4646C3.5248 16.824 3.51606 16.1582 3.5161 15.5161L3.51617 11.913L3.51606 10.5097C3.51585 10.291 3.50314 9.88646 3.53633 9.69117C3.58046 9.4435 3.7029 9.21647 3.88564 9.04359C4.06035 8.87581 4.28333 8.767 4.52314 8.7326C4.66116 8.71351 4.8291 8.71771 4.97072 8.71777L5.54417 8.71821L7.50449 8.7185L11.3673 8.71852L12.6277 8.7182C12.8558 8.71806 13.0841 8.71756 13.3122 8.71905C13.6573 8.7213 13.9562 8.84602 14.195 9.10002C14.3481 9.26323 14.451 9.46723 14.491 9.68757C14.5223 9.86221 14.5129 10.1562 14.5129 10.3432L14.5126 11.3418V14.9722L14.5129 16.6165C14.5129 16.8718 14.5242 17.2158 14.5105 17.4622L15.4767 17.4644C16.0748 17.4647 16.5631 17.5262 17.0286 17.0612C17.3916 16.6986 17.4374 16.3462 17.438 15.8669L17.4377 8.02846L17.4379 5.32969C17.438 5.09001 17.4461 3.87439 17.4256 3.8533C16.7071 3.11592 15.2617 1.64313 14.582 0.971279C14.5678 0.957322 14.5532 0.943725 14.5383 0.930472C14.5469 1.18594 14.5402 1.47328 14.5401 1.73131L14.54 3.23781L14.5407 4.05143C14.5408 4.22975 14.5494 4.47508 14.5162 4.64396C14.4724 4.85964 14.3695 5.05888 14.2189 5.21942C13.9932 5.46302 13.6846 5.59593 13.3559 5.59744C13.127 5.59848 12.8987 5.59949 12.6699 5.59934L11.4408 5.59892L7.66575 5.5988L5.61618 5.59912L5.00563 5.59956C4.85203 5.59959 4.68475 5.60414 4.53372 5.58382C4.29514 5.55258 4.0726 5.44655 3.89802 5.28095C3.65458 5.05247 3.51463 4.75356 3.51692 4.41812C3.52573 3.12673 3.50213 1.83054 3.51673 0.539546L2.39755 0.535706C2.25696 0.53569 2.02528 0.528195 1.89422 0.53976C1.74419 0.550536 1.6253 0.562501 1.48091 0.607604C0.970717 0.76697 0.580331 1.25259 0.541689 1.78712C0.524428 2.02589 0.533457 2.29383 0.533441 2.5356L0.533382 3.9416L0.533388 8.47671L0.533582 13.6759L0.533285 15.3117C0.533205 15.5593 0.521427 15.9705 0.540305 16.2049C0.572296 16.5712 0.749387 16.9097 1.03218 17.1448C1.19825 17.284 1.39531 17.3814 1.60679 17.4287C1.83785 17.4805 2.09974 17.4599 2.33639 17.4644C2.72261 17.4718 3.12896 17.4538 3.51331 17.4646ZM13.3286 17.464C13.5322 17.464 13.7735 17.4585 13.9739 17.4673L13.9759 12.2303V10.616L13.9766 10.1295C13.9769 9.86933 13.9956 9.67052 13.7991 9.47109C13.6362 9.30586 13.4843 9.28617 13.2585 9.28433L8.02324 9.28485L5.83162 9.28477C5.4776 9.28477 5.07664 9.27554 4.72672 9.28547C4.5162 9.29944 4.38296 9.33029 4.23193 9.49456C4.14511 9.58895 4.09173 9.71543 4.08581 9.84305C4.07307 10.1174 4.07843 10.4085 4.07841 10.6836L4.07839 12.3347L4.07927 17.4629C4.38218 17.4538 4.75424 17.4641 5.06217 17.4641L7.10676 17.4642L13.3286 17.464ZM13.8238 4.84525C14.0442 4.6103 14.007 4.39452 14.0062 4.09154L14.005 3.51268L14.0051 1.55284L14.0048 0.909967C14.0048 0.797541 14.0007 0.647856 14.0077 0.537284C13.7589 0.541795 13.4912 0.536056 13.2404 0.536022L11.5784 0.535905L6.58223 0.53591L4.78752 0.536084C4.67872 0.536184 4.14983 0.545808 4.08005 0.530385L4.07894 3.27601L4.07809 4.07334C4.07784 4.35134 4.03825 4.62998 4.25488 4.84436C4.4257 5.0134 4.57683 5.03345 4.808 5.03444L10.7554 5.03367L12.5626 5.03401L13.1127 5.03424C13.404 5.03419 13.6009 5.06287 13.8238 4.84525Z\" fill=\"#EBE3D8\" stroke=\"#EBE3D8\" stroke-width=\"0.4\"/>\n<path d=\"M5.81588 15.1028C6.09447 15.088 6.51104 15.1009 6.80076 15.1009L8.74528 15.101L11.0165 15.1009C11.4147 15.1006 11.8122 15.099 12.2111 15.102C12.3546 15.0947 12.4881 15.1704 12.5113 15.3244C12.5389 15.5087 12.4233 15.637 12.2518 15.6688C11.9434 15.6855 11.5148 15.673 11.1988 15.673H9.19233L6.90171 15.6728L6.28553 15.6729C6.11874 15.674 5.81715 15.7035 5.66888 15.6229C5.53966 15.5526 5.50176 15.3358 5.59352 15.2207C5.66136 15.1355 5.71348 15.1192 5.81588 15.1028Z\" fill=\"#EBE3D8\" stroke=\"#EEE8DB\" stroke-width=\"0.2\"/>\n<path d=\"M5.79521 13.081C6.089 13.066 6.48386 13.0774 6.78435 13.0774L8.66567 13.0775L11.0278 13.0778C11.4182 13.0778 11.8087 13.0765 12.1991 13.0779C12.3544 13.0785 12.4714 13.1395 12.508 13.3011C12.5241 13.3732 12.51 13.4488 12.4688 13.5101C12.417 13.5881 12.3527 13.6205 12.2647 13.6392C11.9669 13.6554 11.5715 13.6443 11.2688 13.6443L9.43009 13.6443L7.02067 13.644C6.64482 13.6437 6.26899 13.6449 5.89318 13.6447C5.73538 13.6447 5.59057 13.5991 5.54838 13.4273C5.52966 13.3524 5.54275 13.273 5.58456 13.2081C5.64024 13.1226 5.70275 13.0982 5.79521 13.081Z\" fill=\"#EBE3D8\" stroke=\"#EEE8DB\" stroke-width=\"0.2\"/>\n<path d=\"M5.77273 11.0869C5.93526 11.0696 6.34544 11.0806 6.52225 11.0807L7.96063 11.0809L10.7141 11.0808C11.1951 11.0805 11.6765 11.0799 12.1575 11.0808C12.2105 11.0809 12.313 11.0822 12.3602 11.1039C12.4249 11.1336 12.4727 11.1855 12.4973 11.2528C12.5252 11.3307 12.5198 11.4167 12.4826 11.4904C12.4405 11.5721 12.3782 11.6101 12.2942 11.6374C12.1379 11.6568 11.6917 11.6462 11.5165 11.6461L9.97636 11.646H7.25278C6.79578 11.6461 6.33671 11.6479 5.87968 11.6454C5.81899 11.645 5.72563 11.6346 5.67428 11.6031C5.60939 11.5634 5.56364 11.4988 5.5478 11.4245C5.51322 11.2629 5.61429 11.1229 5.77273 11.0869Z\" fill=\"#EBE3D8\" stroke=\"#EEE8DB\" stroke-width=\"0.2\"/>\n<path d=\"M12.0599 1.63552C12.0988 1.63239 12.1383 1.63037 12.1767 1.63883C12.259 1.65696 12.33 1.70584 12.3711 1.78025C12.3956 1.82463 12.3988 1.89915 12.4017 1.94987C12.4128 2.14127 12.4157 3.69572 12.3831 3.78401C12.3486 3.87736 12.2721 3.92414 12.1857 3.96141C11.9361 3.99977 11.8411 3.83537 11.8423 3.61574C11.8452 3.0523 11.8364 2.48801 11.844 1.92463C11.8463 1.76292 11.9004 1.67865 12.0599 1.63552Z\" fill=\"#EBE3D8\"/>\n</g>\n<defs>\n<clipPath id=\"clip0_8_18374\">\n<rect width=\"18\" height=\"18\" fill=\"white\"/>\n</clipPath>\n</defs>\n</svg>\n")"
+                        Disabled="@(!contentChanged || hasItemsInEmptyCategory)"
+                        OnClick="SaveContent"/>
+            </Tooltip>
+
+        </div>
+    </HeaderButtons>
+    <ChildContent>
+        @* ── פריטים ── *@
+        <div class="items-section">
+            <div class="content-header-col"> @* כותרת + כפתור הוספת פריט *@
+                @if (selectedCategory != null)
+                {
+                    // כפתור הוספת פריט - קיים רק במידה ויש קטגוריה בחורה
+                    <Button Variant="primary"
+                            AdditionalClass="btn-large"
+                            Icon="@("<svg width=\"23\" height=\"23\" viewBox=\"0 0 23 23\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path d=\"M0 11.5C0 11.0479 0.163633 10.6583 0.490898 10.3312C0.818163 10.0042 1.20799 9.84065 1.66039 9.84065H9.84683V1.67378C9.84683 1.22166 10.0056 0.832079 10.3233 0.505019C10.6506 0.16834 11.0452 0 11.5072 0C11.9692 0 12.3591 0.16834 12.6767 0.505019C13.004 0.832079 13.1676 1.22166 13.1676 1.67378V9.84065H21.354C21.8064 9.84065 22.1915 10.0042 22.5091 10.3312C22.8364 10.6583 23 11.0479 23 11.5C23 11.9617 22.8364 12.3561 22.5091 12.6832C22.1915 13.0102 21.8064 13.1738 21.354 13.1738H13.1676V21.3407C13.1676 21.7928 13.004 22.1824 12.6767 22.5094C12.3591 22.8365 11.9692 23 11.5072 23C11.0452 23 10.6506 22.8365 10.3233 22.5094C10.0056 22.1824 9.84683 21.7928 9.84683 21.3407V13.1738H1.66039C1.20799 13.1738 0.818163 13.0102 0.490898 12.6832C0.163633 12.3561 0 11.9617 0 11.5Z\" fill=\"#EBE3D8\"/>\n</svg>\n")"
+                            Text=""
+                            OnClick="AddItem"/>
+                }
+                <h4>פריטים</h4>
+            </div>
+            
+            <div class="items-grid-col">
+                @if (selectedCategory == null) // אם אין קטגוריה בחורה אז נגיד למשתמש שהוא צריך לבחור אחת
+                {
+                    <p>להוספת פריטים יש לבחור קטגוריה</p>
+                }
+
+                else
+                {
+                    <div class="items-grid">
+                        @for (int i = 0; i < selectedCategory.Items.Count; i++)
+                        {
+                            ItemToSave item = selectedCategory.Items[i];
+                            string itemInputId = "item_" + i.ToString();
+
+                            <ItemCard @key="item"
+                                      Item="item"
+                                      Index="i"
+                                      CanDelete="@(!(string.IsNullOrWhiteSpace(item.Content) && selectedCategory.Items.Count <= minItems) || item.ID > 0)"
+                                      ItemInputId="@itemInputId"
+                                      OnDelete="() => RemoveItem(item)"
+                                      OnImageDelete="() => DeleteItemImage(item)"
+                                      OnImageUpload="(e) => UploadItemFile(e, item)"
+                                      OnContentChanged="MarkContentChanged"
+                                      OnTextClear="() => { item.Content = string.Empty; MarkContentChanged(); }"
+                                      IsUploading="@(uploadingItem == item)"/>
+                        }
+                    </div>
+                }
+            </div>
+           
+
+            @* ── לוח סבבים ── *@
+            @if (showBoard)
+            {
+                <div class="board-wrapper">
+                    <div class="board-img-wrapper">
+                        <img src="Images/RoundsBoard.png" width="170" height="221" alt="לוח להצגת סטטוס הסבבים במשחק"/>
+                    </div>
+                    <div class="board-text-wrapper">
+                        <span>סה״כ פריטים במשחק: </span> <b>@totalItems</b> <br/>
+                        @if (gameStatus.CanPublish) // רק אם בכלל המשתמש עומד בתנאים לצירת משחק המידע יסופק לו
+                        {
+                        <span>כמות סבבים נוכחית: </span> <b>@rounds</b> <br/> <br/>
+                        @if (missingItems > 0 && totalItems >= 18)
+                        {
+                        <span>שימו לב ! כדי להשלים סבב נוסף יש להוסיף עוד </span>
+                        <b>@missingItems</b>
+                        <span>פריטים</span>
+                        }
+                        }
+                        
+                    </div>
+                </div>
+
+            }
+
+        </div>
+        <hr class="between-itms-to-cats"/>
+
+        @* ── קטגוריות ── *@
+        <div class="cats-section">
+            <div class="content-header-col">
+                @* כפתור + קטגוריה — מוצג רק אם יש פחות מ-5 *@
+                @if (categories.Count < 5)
+                {
+                    <Button Variant="primary"
+                            AdditionalClass="btn-large"
+                            Icon="@("<svg width=\"23\" height=\"23\" viewBox=\"0 0 23 23\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<path d=\"M0 11.5C0 11.0479 0.163633 10.6583 0.490898 10.3312C0.818163 10.0042 1.20799 9.84065 1.66039 9.84065H9.84683V1.67378C9.84683 1.22166 10.0056 0.832079 10.3233 0.505019C10.6506 0.16834 11.0452 0 11.5072 0C11.9692 0 12.3591 0.16834 12.6767 0.505019C13.004 0.832079 13.1676 1.22166 13.1676 1.67378V9.84065H21.354C21.8064 9.84065 22.1915 10.0042 22.5091 10.3312C22.8364 10.6583 23 11.0479 23 11.5C23 11.9617 22.8364 12.3561 22.5091 12.6832C22.1915 13.0102 21.8064 13.1738 21.354 13.1738H13.1676V21.3407C13.1676 21.7928 13.004 22.1824 12.6767 22.5094C12.3591 22.8365 11.9692 23 11.5072 23C11.0452 23 10.6506 22.8365 10.3233 22.5094C10.0056 22.1824 9.84683 21.7928 9.84683 21.3407V13.1738H1.66039C1.20799 13.1738 0.818163 13.0102 0.490898 12.6832C0.163633 12.3561 0 11.9617 0 11.5Z\" fill=\"#EBE3D8\"/>\n</svg>\n")"
+                            Text=""
+                            OnClick="AddCategory"/>
+                }
+                <h4>קטגוריות</h4>
+            </div>
+            <div class="cats-grid">
+                @for (int i = 0; i < categories.Count; i++)
+                    // שימוש בלולאת for כדי להבדיל את כפתורי הרדיו של כל אחת מהקטגוריות הריקות שאין להן עדיין id
+                {
+                    CategoryToSave cat = categories[i]; // שימוש יותר נוח בקטגוריה הנוכחית בלולאה
+                    string catInputId = "cat_" + i.ToString(); // שימוש באינדקס במקום ID כדי למנוע התנגשות בין קטגוריות ריקות
+
+                    <CategoryBox @key="cat"
+                                 Cat="cat"
+                                 IsSelected="@(selectedCategory == cat)"
+                                 Index="i"
+                                 CanDelete="@(!(string.IsNullOrWhiteSpace(cat.Content) && categories.Count <= minCategories) || cat.ID > 0)"
+                                 OnSelect='() => SelectCategory(cat)'
+                                 OnDelete='() => RemoveCategory(cat)'
+                                 OnImageDelete="() => DeleteCategoryImage(cat)"
+                                 OnImageUpload="(e) => UploadCategoryFile(e, cat)"
+                                 OnContentChanged="MarkContentChanged"
+                                 CatInputId="@catInputId"
+                                 OnTextClear="() => { cat.Content = string.Empty; MarkContentChanged(); }"
+                                 IsUploading="@(uploadingCategory == cat)"/>
+                    @* אם הקטגוריה הנוכחית היא זו שנבחרה — מוסיפים מחלקת עיצוב מודגשת, אחרת ללא מחלקה *@
+                    @* שולחת את הערך החדש לקומפוננטת אב כדי לעדכן את הטקסט החדש *@
+                    @* בלחיצה על תיבת הטקסט הקטגוריה תיבחר *@
+                    @* מחיקת קטגוריה — stopPropagation מונע בחירת הקטגוריה בעת לחיצה על מחק *@
+                    @* IsUploading מעביר true רק לקטגוריה שמתבצעת בה כרגע העלאת תמונה — כך הספינר יופיע רק עליה ולא על כולן *@
+                }
+            </div>
+        </div>
+
+        <p>@contentMsg</p>
+    </ChildContent>
+</AccordionSection>
+
+@* ── פופאפים ── *@
+
+<PopUp IsVisible="@showPublishPopup"
+       Title="פרסום משחק"
+       ConfirmText="פרסום משחק"
+       CancelText="ביטול"
+       OnConfirm="ConfirmPublish"
+       OnCancel="() => showPublishPopup = false"
+       OnClose="() => showPublishPopup = false">
+    <p>האם ברצונך לפרסם את המשחק "@displayName" לפי עונות השנה?</p>
+    <p>קוד משחק: @gameStatus.GameCode</p>
+</PopUp>
+
+<PopUp IsVisible="@showDeleteCategoryPopup"
+       Title="מחיקת קטגוריה"
+       ConfirmText="מחיקה"
+       CancelText="ביטול"
+       OnConfirm="() => DeleteCategory(categoryToDelete)"
+       OnCancel="() => showDeleteCategoryPopup = false"
+       OnClose="() => showDeleteCategoryPopup = false">
+    @if (deleteBreaksPublish)
+    {
+        <p>לקטגוריה זו קיימים
+            @categoryToDeleteItemsCount
+            פריטים, המחיקה תגרום לאי עמידה בתנאי הפרסום, האם למחוק בכל זאת?
+        </p>
+    }
+    else
+    {
+        <span>לקטגוריה זו קיימים @categoryToDeleteItemsCount פריטים,</span><br/>
+        <span>האם למחוק בכל זאת?</span>
+    }
+</PopUp>
+
+<PopUp IsVisible="@showUnsavedChangesPopup"
+       Title="שמירת שינויים"
+       ConfirmText="שמור שינויים"
+       CancelText="לא לשמור"
+       OnConfirm="SaveAndNavigate"
+       OnCancel="NavigateWithoutSaving"
+       OnClose="() => showUnsavedChangesPopup = false">
+    <span>לפני חזרה לעמוד המשחקים שלי,</span><br/>
+    <span>האם לשמור את השינויים שבוצעו?</span>
+</PopUp>
+
+@code {
+
+    // ── פרמטר ── //
+    [Parameter] public int gameIdToEdit { get; set; }
+
+    // ── פרסום המשחק ── //
+    GameToTableDTO gameStatus = new GameToTableDTO();
+    bool wasEverPublished = false; // כדי להראות אנימציה - האם המשחק כבר פורסם
+    
+    // ── הגדרות משחק ── //
+    GameToAddDTO gameToEdit = new GameToAddDTO();
+    GameToAddDTO originalGame = new GameToAddDTO();
+    string displayName = ""; // שם המשחק בכותרת — מתעדכן רק אחרי שמירה
+    bool noLimit = false;
+    bool canSave = false;
+    string msg = "";
+    bool isSettingsOpen; // במידה וזה משחק חדש האקורדיון של ההגדרות יהיה כבר פתוח
+    bool showPublishPopup = false; // האם להראות פופ אפ פרסום
+    bool showUnsavedChangesPopup = false; // פופ-אפ שמירת שינויים (בלחיצה על ״בחזרה למשחקים שלי״)
+
+    
+    // ── עריכת תוכן ── //
+    List<CategoryToSave> categories = new List<CategoryToSave>();
+    CategoryToSave selectedCategory = null;
+    bool contentChanged = false;
+    string contentMsg = "";
+    // רשימות של IDs שנמחקו — ישלחו לשרת בעת שמירה
+    List<int> deletedCategoryIds = new List<int>();
+    List<int> deletedItemIds = new List<int>();
+    bool hasItemsInEmptyCategory = false; // אם יש פריטים בקטגוריה ללא תוכן לא נאפשר למשתמש לשמור ונציג טולטיפ הסבר
+    
+    // ── ספירת סבבים ── //
+    int totalItems = 0; // ספירת פריטים
+    int rounds = 0; // ספירת סבבים
+    int missingItems = 0; // כמה פריטים צריך להוסיף עד להשלמת סבב נוסף במשחק
+    bool showBoard = false; // נרצה שיראו את הלוח רק במידה ויש לפחות קטגוריה אחת עם תוכן
+    
+    // ── מחיקת קטגוריה ── //
+    bool showDeleteCategoryPopup = false;
+    CategoryToSave categoryToDelete = null;
+    string categoryToDeleteItemsCount = ""; // בשביל הפופ-אפ
+    bool deleteBreaksPublish = false;
+    
+    // ── העלאת תמונה ── //
+    long maxFileSize = 4194304;
+    List<string> deletedImagePaths = new List<string>(); // רשימה שתשמור את שמות התמונות שצריך למחוק - במקום למחוק אותן מיד מהשרת
+    ItemToSave uploadingItem = null; // לצורך הצגת אנימציית טעינת תמונה על פריט
+    CategoryToSave uploadingCategory = null; // לצורך הצגת אנימציית טעינת תמונה על קטגוריה
+
+    
+    // ── תנאים למינימום פיריטים וקטגוריות ── //
+    int minCategories = 3; // מינימום קטגוריות
+    int minItems = 6; // מינימום פריטים לקטגוריה
+    bool hasMinCategories = false; // האם עומד בתנאי
+    bool hasMinItemsPerCategory = false; // האם עומד בתנאי
+    
+
+    // ── טעינה ראשונית ── //
+    protected override async Task OnParametersSetAsync()
+        // כאשר הוגדר פרמטר וקיבלנו מספר דרך הנתיב
+    {
+       
+        if (gameIdToEdit == 0) // אם זה משחק חדש
+        {
+            gameToEdit = new GameToAddDTO(); // איפוס משתנה
+            originalGame = new GameToAddDTO(); // איפוס המשתנה
+            isSettingsOpen = true; // אם זה משחק חדש האקורדיון צריך להיות פתוח בהגדרות המשחק
+        }
+        else if (gameIdToEdit > 0) // אם זה משחק קיים
+        {
+            isSettingsOpen = false; // סגור במידה וזה משחק קיים - המשתמש יבחר מה לפתוח קודם
+            await LoadGameSettings(); // טעינת הגדרות
+            await LoadPublishStatus(); // טעינת סטטוס פרסום
+            await LoadGameContent(); // טעינת תוכן (קטגוריות ופריטים)
+        }
+    }
+
+    async Task LoadGameSettings()
+// טעינת הגדרות המשחק מהשרת
+    {
+        var gameRes = await Http.GetAsync($"api/EditGame/GetGame/{gameIdToEdit}");
+        if (gameRes.IsSuccessStatusCode)
+        {
+            gameToEdit = await gameRes.Content.ReadFromJsonAsync<GameToAddDTO>();
+
+            if (gameToEdit.RoundTime == 0)
+                noLimit = true;
+            // אם הנתון של ללא הגבלה מסומן אז גם הצ׳ק בוקס צריך להופיע מסומן
+
+            originalGame = new GameToAddDTO
+            {
+                GameName = gameToEdit.GameName,
+                RoundTime = gameToEdit.RoundTime,
+                Instructions = gameToEdit.Instructions
+            };
+            displayName = gameToEdit.GameName;
+        }
+    }
+
+
+    async Task LoadPublishStatus()
+    {
+        var publishRes = await Http.GetAsync($"api/EditGame/GetPublishStatus/{gameIdToEdit}");
+        if (publishRes.IsSuccessStatusCode)
+        {
+            gameStatus = await publishRes.Content.ReadFromJsonAsync<GameToTableDTO>(); // שמירת מצב הפרסום הנוכחי אחרי לחיצה על כפתור ״שמירת שינויים״
+            if (gameStatus.IsPublish)
+                wasEverPublished = true; // בשביל האנימציה 
+        }
+    }
+
+    async Task UpdateCanPublishStatus()
+    {
+        await Http.PostAsync($"api/Games/CheckCanPublish/{gameToEdit.ID}", null);
+        await LoadPublishStatus();
+    }
+
+    async Task LoadGameContent()
+        // מטרת הפונקציה: טעינת תוכן המשחק מהשרת — קטגוריות ופריטים
+// בנוסף: השלמת פלייסהולדרים למינימום, וחישוב עמידה בתנאי פרסום        
+    {
+        categories = new List<CategoryToSave>();
+        selectedCategory = null;
+        // מאפס את הרשימה ואת הקטגוריה הבחורה כל טעינה מחדש ומונע כפילויות
+        var res = await Http.GetAsync($"api/EditGame/GetGameContent/{gameIdToEdit}");
+        if (res.IsSuccessStatusCode)
+        {
+            var fullGame = await res.Content.ReadFromJsonAsync<FullGameToSave>();
+            if (fullGame != null)
+                categories = fullGame.Categories; // כל המידע נמצא פה ברשימת הקטגוריות - כל קטגוריה מכילה רשימת פריטים
+            else
+                categories = new List<CategoryToSave>(); // אם אין תוכן כלל אז תיצור רשימה ריקה - ישמש לבדיקה לפלייסהולדרים
+        }
+
+        // השלמה למינימום 3 קטגוריות עם פלייסהולדרים ריקים
+        while (categories.Count < minCategories)
+        {
+            categories.Add(new CategoryToSave { Items = new List<ItemToSave>() });
+            // כל עוד יש לנו פחות מ3 קטגוריות תשלים מידע ריק כדי להראות פלייסהולדרים
+        }
+
+        
+        int validCategoriesCount = 0; // לצורך הצגת עמידות בתנאי פרסום
+        int categoriesWithContent = 0; // לצורך הצגת עמידות בתנאי פרסום
+
+        foreach (var cat in categories)
+        {
+            EnsureMinItems(cat); // השלמת פריטים למינימום 6 לכל קטגוריה 
+    
+            if (!string.IsNullOrWhiteSpace(cat.Content)) // אם יש תוכן בקטגוריה
+            {
+                categoriesWithContent++; // לסכום את הקטגוריות שיש בהן תוכן
+        
+                int itemsWithContent = 0; // פריטים שיש בהם תוכן
+                foreach (var item in cat.Items) // מעבר על כל הפריטים בקטגוריה
+                {
+                    if (!string.IsNullOrWhiteSpace(item.Content)) // אם יש תוכן 
+                        itemsWithContent++; // לסכום 
+                }
+                if (itemsWithContent >= minItems) // אם יש לפחות 6 פריטים בקטגוריה בעלי תוכן
+                    validCategoriesCount++; // הקטגוריה נספרת כאחת שעומדת בתנאים
+            }
+        }
+
+        hasMinCategories = categoriesWithContent >= minCategories; // תנאי: אם מספר הקטגוריות שעומדות בתנאים יותר גדול או שווה למינימום אז המשתנה חיובי 
+        hasMinItemsPerCategory = categoriesWithContent > 0 && validCategoriesCount == categoriesWithContent;
+        // אם יש 3 קטגוריות עם תוכן מינימום ושלותשתן עומדות בתנאים של מינימום פריטים לקטגוריה
+        CalcStats(); 
+    }
+
+    async Task ConfirmPublish()
+// אישור פרסום המשחק לאחר לחיצה על כפתור האישור בפופ אפ     
+    {
+        wasEverPublished = false;
+        PublishGame publishData = new PublishGame { ID = gameToEdit.ID, IsPublish = true };
+        // יוצרים משתנה חדש עם מזהה המשחק ו-IsPublish=true כדי לפרסם
+
+        var res = await Http.PostAsJsonAsync("api/Games/publishGame", publishData);
+        if (res.IsSuccessStatusCode)
+        {
+            showPublishPopup = false;
+            // סגירת הפופ אפ
+            gameStatus.IsPublish = true;
+            // עדכון המשתנה בעמוד כדי שהכפתור יתחלף ויזואלית
+
+            if (!wasEverPublished)
+            {
+                wasEverPublished = true;
+                // סימון שהמשחק פורסם לראשונה — כדי שהאנימציה תופיע רק הפעם
+                await StartConfetti(); // קונפטיייי (: 
+
+            }
+        }
+    }
+
+    async Task UnpublishGame()
+// ביטול פרסום המשחק    
+    {
+        PublishGame publishData = new PublishGame { ID = gameToEdit.ID, IsPublish = false };
+        //  משתנה מסוג PublishGame עם מזהה המשחק ו-IsPublish=false כדי לבטל פרסום
+
+        var res = await Http.PostAsJsonAsync("api/Games/publishGame", publishData);
+        // שולחים את המשתנה החדש לשרת כדי לבטל פרסום
+
+        if (res.IsSuccessStatusCode)
+        {
+            gameStatus.IsPublish = false;
+            // אם השרת אישר — מעדכנים את המשתנה בעמוד כדי שנראה גם ויזואלית את השינוי
+        }
+    }
+
+    void EnsureMinItems(CategoryToSave cat)
+        // השלמת רשימת הפריטים של קטגוריה למינימום 6 — רק אם יש לה תוכן
+    {
+        if (cat.Items == null)
+            cat.Items = new List<ItemToSave>();
+
+        if (selectedCategory != null) // אם יש קטגוריה שנבחרה
+        {
+            while (cat.Items.Count < minItems) // כל עוד רשימת הפריטים מונה פחות מכמות הפריטים המינימלית (6 פריטים)
+            {
+                cat.Items.Add(new ItemToSave { CategoryID = cat.ID }); // תשלים מידע ריק בשביל הפלייסהולדרים
+            }
+        }
+    }
+
+    void SelectCategory(CategoryToSave cat)
+        // בחירת קטגוריה — גם משלימה את הפריטים שלה למינימום
+    {
+        selectedCategory = cat;
+        EnsureMinItems(cat);
+    }
+
+    // ── הוספת קטגוריה / פריט ── //
+
+    void AddCategory()
+        // הוספת קטגוריה ריקה חדשה (עד מקסימום 5) בלחיצה על כפתור +
+    {
+        if (categories.Count < 5)
+        {
+            categories.Add(new CategoryToSave { Items = new List<ItemToSave>() });
+        }
+    }
+
+    void AddItem()
+        // הוספת פריט ריק לקטגוריה הנבחרת
+    {
+        if (selectedCategory != null)
+        {
+            selectedCategory.Items.Add(new ItemToSave { CategoryID = selectedCategory.ID });
+        }
+    }
+
+    // ── מחיקת קטגוריה / פריט ── //
+
+    void RemoveCategory(CategoryToSave cat)
+    {
+        bool hasItems = false; // כדי לבדוק אם יש בקטגוריה פריטים או לא (משפיע על התצוגה בפופ אפ ועל התנהגות המחיקה)
+        bool catIsValid = false;
+        int itemsCount = 0; // בשביל התצוגה בפופ אפ 
+        int validCategoriesCount = 0; // יכיל את כל הקטגוריות בעלות מינימום פריטים (חוץ מזו שנרצה למחוק)
+
+        if (cat.Items != null) // לסכום את מספר הפריטים של הקטגוריה הנוכחית שנרצה למחוק
+        {
+            foreach (ItemToSave item in cat.Items)
+            {
+                if (!string.IsNullOrWhiteSpace(item.Content))
+                {
+                    hasItems = true; // משתנה חיובי - יש פריטים לקטגוריה
+                    itemsCount++; // מציג כמה פריטים יש לה
+                }
+            }
+        }
+
+        if (itemsCount >= minItems)
+        {
+            catIsValid = true; // רק במידה ויש לקטגוריה מספיק פריטים אז היא עומדת בתנאים
+        }
+        
+        foreach (CategoryToSave c in categories)
+        {
+            if (c == cat) 
+            {
+                continue; // נרצה לבדוק את כל הקטגוריות האחרות ולא את זאת שמוחקים
+            }
+
+            if (!string.IsNullOrWhiteSpace(c.Content)) // אם יש תוכן לקטגוריה
+            {
+                int itemsWithContent = 0; // יסכום את הקטגוריות
+                foreach (ItemToSave item in c.Items) // מעבר על הפריטים של אותה קטגוריה
+                {
+                    if (!string.IsNullOrWhiteSpace(item.Content)) // אם לפריט הזה יש תוכן
+                        itemsWithContent++; // תסכום גם אותו
+                }
+
+                if (itemsWithContent >= minItems) // אם הקטגוריה עומדת בתנאי הפרסום - מינימום פריטים לכל קטגוריה
+                    validCategoriesCount++; // תסכום לקטגוריות שעומדות בתנאי פרסום
+            }
+        }
+
+        if (gameStatus.CanPublish && catIsValid && validCategoriesCount < minCategories)
+            // בדיקה של 3 תנאים
+            // 1. אם המשחק ניתן לפרסום
+            // 2. אם הקטגוריה שאנחנו רוצים למחוק היא עומדת בתנאים
+            // 3. אם הקטגוריות התקינות האחרות יותר קטנות מהמינימום הנדרש
+        {
+            deleteBreaksPublish = true; // אז תנאי הפרסום נשברים
+        }
+        else 
+            // אם לא אז או שלא עמדנו בתנאי פרסום או שיש יותר קטגוריות תקינות מהמינימום
+        { 
+            deleteBreaksPublish = false;
+        }
+        
+        if (hasItems || deleteBreaksPublish)
+            // פתיחת פופ אפ אם יש פריטים או שהמחיקה תשבור תנאי פרסום
+        {
+            categoryToDelete = cat;
+            categoryToDeleteItemsCount = itemsCount.ToString();
+            showDeleteCategoryPopup = true;
+        }
+        else // אם אין לקטגוריה תוכן של טקסט / תמונה אפשר למחוק אותה פשוט בלי הגנה
+        {
+            DeleteCategory(cat);
+            // מחיקה ישירה ללא וידוא
+        }
+    }
+
+
+
+    void DeleteCategory(CategoryToSave cat)
+// מחיקת הקטגוריה בפועל    
+    {
+        if (cat.ID > 0)
+            deletedCategoryIds.Add(cat.ID); // כדי לעדכן בכפתור שמירה
+
+        categories.Remove(cat); // עדכון ויזואלי
+
+        if (selectedCategory == cat)
+            selectedCategory = null; // איפוס הקטגוריה שנבחרה
+
+        while (categories.Count < minCategories) // אם מספר הקטגוריות עכשיו קטן מהמינימום צריך להוסיף פלייסהולדר
+        {
+            categories.Add(new CategoryToSave { Items = new List<ItemToSave>() });
+        }
+
+        MarkContentChanged(); // יש שינוי בעריכת התוכן
+        showDeleteCategoryPopup = false; // סגירת הפופ-אפ
+        categoryToDelete = null; // איפוס קטגוריה למחיקה
+    }
+
+    void RemoveItem(ItemToSave item)
+        // מחיקת פריט — אם היה שמור בבסיס הנתונים נוסיף ל-DeletedItemIds
+    {
+        if (item.ID > 0)
+            deletedItemIds.Add(item.ID);
+
+        selectedCategory.Items.Remove(item);
+
+        // שמירה על מינימום 6 פריטים ויזואלית אם לקטגוריה יש תוכן
+        EnsureMinItems(selectedCategory);
+
+        MarkContentChanged();
+    }
+
+    // ── ניקוי של הפריטים והקטגוריות הריקות לפני השמירה לשרת!! ── //
+
+    async Task CleanContentBeforeSave()
+// מטרת הפונקציה: ניקוי פריטים וקטגוריות ריקות לפני שמירה — מחיקה מהשרת אם יש id     
+    // מטרת הפונקציה גם לנקות רווחים מיותרים לפריטים וקטגוריות שיש להם תוכן טקסטואלי
+    {
+        foreach (var cat in categories) // מעבר על כל הקטגוריות
+        {
+            int itemsWithContent = 0; // נספור פריטים שיש להם תוכן כדי להשתמש בתנאי של הקטגוריות
+            foreach (var item in cat.Items) // מעבר על כל הפריטים
+            {
+                if (string.IsNullOrWhiteSpace(item.Content)) // אם אין תוכן כלשהו
+                {
+                    if (item.ID > 0) // ויש id - זאת אומרת שהפריט היה שמור במערכת 
+                        deletedItemIds.Add(item.ID); // נוסיף את הפריט לרשימה שמוחקת את הפריטים
+                }
+                else
+                {
+                    itemsWithContent++; // סופרים פריטים עם תוכן
+                    if (!item.IsImage) // אם זה טקסט ולא תמונה - תנקה רווחים מיותרים לפני שליחה לשרת
+                    {
+                        item.Content = item.Content.Trim();
+                    }
+                }
+            }
+
+            // קטגוריה בלי תוכן (תמונה או טקסט) וגם ללא פריטים עם תוכן וגם שהייתה כבר שמורה במערכת — צריך למחוק אותה
+            if (string.IsNullOrWhiteSpace(cat.Content) && itemsWithContent == 0 && cat.ID > 0 )
+            {
+                    deletedCategoryIds.Add(cat.ID);
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(cat.Content) && !cat.IsImage) // קטגוריות שכן יש בהם תוכן נרצה פשוט לנקות רווחים מיותרים
+                {
+                    cat.Content = cat.Content.Trim();
+                }
+            }
+        }
+    }
+    
+    
+
+    // ── הגדרות משחק: שמירה ── //
+    void CheckCanSave()
+    {
+        msg = "";
+        // אם משהו השתנה באחד מהתכנים מהגרסה המקורית
+        canSave = (gameToEdit.GameName != originalGame.GameName
+                   || gameToEdit.RoundTime != originalGame.RoundTime
+                   || gameToEdit.Instructions != originalGame.Instructions)
+                  && !string.IsNullOrWhiteSpace(gameToEdit.GameName)
+                  && !string.IsNullOrWhiteSpace(gameToEdit.Instructions);
+    }
+
+    void OnNoLimitChanged()
+        // בשינוי של הצ׳קבוקס זמן לכל תור
+    {
+        if (noLimit)
+        {
+            gameToEdit.RoundTime = 0;
+        }
+        else
+        {
+            gameToEdit.RoundTime = 30; // ברירת מחדל כשמבטלים
+        }
+    }
+
+    void OnNoLimitAndCheckSave()
+    {
+        OnNoLimitChanged();
+        CheckCanSave();
+    }
+
+    async Task SaveGameSettings()
+        // בלחיצה על ״שמירה״
+    {
+        gameToEdit.GameName = gameToEdit.GameName.Trim();
+        gameToEdit.Instructions = gameToEdit.Instructions.Trim();
+        // חקירה עצמית: הפונקציה Trim מוחקת רווחים מיותרים בהתחלה ובסוף לפני השליחה לשרת
+
+        if (gameToEdit.ID == 0)
+            // אם זה משחק חדש תקרא לפונקציה בשרת שיוצרת משחק חדש
+        {
+            var newGameRes = await Http.PostAsJsonAsync("api/Games/addGame", gameToEdit);
+            if (newGameRes.IsSuccessStatusCode)
+            {
+                var newGame = await newGameRes.Content.ReadFromJsonAsync<GameToTableDTO>();
+                gameToEdit.ID = newGame.ID;
+                displayName = gameToEdit.GameName;
+                msg = "המשחק נוצר בהצלחה";
+                msg = "";
+                canSave = false;
+                originalGame = new GameToAddDTO // שמירת גרסה לתוך המשתנה
+                {
+                    GameName = gameToEdit.GameName,
+                    RoundTime = gameToEdit.RoundTime,
+                    Instructions = gameToEdit.Instructions
+                };
+                await LoadGameContent(); // עכשיו יש ID אז אפשר לטעון פלייסהולדרים
+            }
+        }
+        else
+            // אם זה משחק קיים תעדכן את הפרטים בהתאם
+        {
+            var editRes = await Http.PostAsJsonAsync("api/EditGame/UpdateGame", gameToEdit);
+            if (editRes.IsSuccessStatusCode)
+            {
+                displayName = gameToEdit.GameName; // עדכון הכותרת רק אחרי שמירה
+                msg = "המשחק עודכן בהצלחה";
+                canSave = false;
+                originalGame = new GameToAddDTO
+                {
+                    GameName = gameToEdit.GameName,
+                    RoundTime = gameToEdit.RoundTime,
+                    Instructions = gameToEdit.Instructions
+                };
+            }
+        }
+    }
+
+    void CancelChanges()
+        // בלחיצה על ביטול שינויים נרצה להחזיר את הפרטים של המשחק האחרון שנשמר
+    {
+        gameToEdit = new GameToAddDTO
+        {
+            ID = gameToEdit.ID,
+            GameName = originalGame.GameName,
+            RoundTime = originalGame.RoundTime,
+            Instructions = originalGame.Instructions
+        };
+        if (originalGame.RoundTime == 0)
+            noLimit = true;
+        else
+            noLimit = false;
+        canSave = false;
+        msg = "";
+    }
+    
+    void MarkContentChanged()
+    // המטרה: להגיד שיש שינוי בעריכת התוכן וגם לנקות את התיבה
+    {
+        contentChanged = true;;
+        contentMsg = "";
+        CheckHasItemsInEmptyCategory(); // בודקת אם יש פריטים בעלי תוכן בתוך קטגוריה ריקה
+        CalcStats(); // אם יש שינוי בתוכן כנראה שצריך לעדכן את לוח הסבבים
+        
+    }
+    
+    void CheckHasItemsInEmptyCategory()
+        // מטרפת הפונקציה היא לבדוק האם יש פריטים בעלי תוכן בתוך קטגוריה שהיא ריקה
+        // לא ניתן למשתמש לשמור את התוכן במקרה כזה
+    {
+        hasItemsInEmptyCategory = false; // איפוס
+        foreach (var cat in categories) // מעבר על הקטגוריות
+        {
+            if (string.IsNullOrWhiteSpace(cat.Content)) // אם הקטגוריה ריקה מתוכן
+            {
+                foreach (ItemToSave item in cat.Items) // מעבר על הפריטים בתוך הקטגוריה
+                {
+                    if (!string.IsNullOrWhiteSpace(item.Content)) // אם יש בהם תוכן
+                    {
+                        hasItemsInEmptyCategory = true; // המשתנה חיובי
+                        return; // אין צורך לעבור על שאר הפריטים אם יש פריט אחד לפחות בעל תוכן
+                    }
+                }
+            }
+        }
+    }
+    
+    void CalcStats()
+    // מטרת הפונקציה: לחשב את מספר הפריטים הקיימים כדי לתת אינדיקציה בזמן אמת למשתמש על כמות הסבבים שיהיו לו במשחק עצמו
+    {
+        // איפוס משתנים
+        totalItems = 0;
+        showBoard = false;
+
+        foreach (CategoryToSave cat in categories) // מעבר על כל הקטגוריות
+        {
+            if (!string.IsNullOrWhiteSpace(cat.Content)) // בדיקה שיש תוכן בלפחות קטגוריה אחת
+                showBoard = true; // אם יש תוכן בקטגוריה אפשר כבר להראות את הלוח גם אם אין עדיין פריטים
+
+            if (cat.Items != null) // ספרית כל הפריטים
+            {
+                foreach (ItemToSave item in cat.Items) // ספירה של כל הפריטים הקיימים בעלי תוכן
+                {
+                    if (!string.IsNullOrWhiteSpace(item.Content))
+                        totalItems++; // משתנה שסוכם כדי שנוכל להציג
+                }
+            }
+        }
+
+        if (gameStatus.CanPublish) // רק אם המשתמש יכול לפרסם זה אומר שיש בכלל מינימום פריטים למשחק לכן צריך להתחיל לחשב סבבים רק אם הגענו בכלל למינימום
+        {
+        rounds = totalItems / 9; // כל סבב במשחק מורכב מכמות הפריטים בסה״כ חלקי 9 ועיגול כלפי מטה
+        // חקירה עצמית: חלוקה של int בint תחזיר תמיד תוצאה מעוגלת כלפי מטה
+
+        // חישוב של כמה פריטים חסרים כדי להשלים לסבב נוסף (שארית חלוקה)
+        if (totalItems % 9 != 0)
+        missingItems = 9 - (totalItems % 9);
+        else
+        missingItems = 0;
+        }
+    }
+
+    // ── שמירת תוכן ── //
+    async Task SaveContent()
+    // מטרתה של הפונקציה היא:
+    // 1. לבדוק שהתוכן שהוזן נכון 
+    // 2. לשלוח את המופע - משחק שלם שמכיל את כל השינויים שהמשתמש עשה
+    //3. טוען את התוכן חזרה מהשרת כדי לעדכן קטגוריות / פריטים שהתווספו
+    // 4. בדיקת מצב הפרסום
+    {
+         // לפני שליחה לשרת נרצה לנקות את כל הקטגוריות / פריטים הריקים + לנקות רווחים מיותרים
+        await CleanContentBeforeSave();
+
+        
+        FullGameToSave fullGame = new FullGameToSave
+        {
+            Categories = categories,
+            DeletedCategoryIds = deletedCategoryIds,
+            DeletedItemIds = deletedItemIds
+        };
+
+        var res = await Http.PostAsJsonAsync($"api/EditGame/SaveContent/{gameToEdit.ID}", fullGame);
+        if (res.IsSuccessStatusCode)
+        {
+            // מחיקת תמונות שהוסרו
+            if (deletedImagePaths.Count > 0)
+            {
+                await Http.PostAsJsonAsync("api/Media/deleteImages", deletedImagePaths);
+                deletedImagePaths = new List<string>(); // איפוס הרשימה של התמונות למחיקה
+            }
+            contentMsg = "השינויים נשמרו בהצלחה";
+            contentChanged = false;
+            // איפוס רשימות המחיקה לאחר שמירה מוצלחת
+            deletedCategoryIds = new List<int>();
+            deletedItemIds = new List<int>();
+            // טעינה מחדש מהשרת כדי לקבל IDים מעודכנים
+            await LoadGameContent();
+            await UpdateCanPublishStatus();; // אולי מצב הפרסום השתנה - צריך לבדוק
+            CalcStats(); // חישוב מספר הפריטים לתצוגה של הלוח
+
+        }
+        else
+        {
+            contentMsg = "שגיאה בשמירה";
+        }
+    }
+    
+    async Task StartConfetti()
+// מטרת הפונקציה: הפעלת אנימציית קונפטי של איקסים ועיגולים שיוצאים משני צידי המסך (:     
+    // נקראת רק בפרסום ראשון של המשחק — כשמשתנה wasEverPublished עדיין  false
+    {
+        await JS.InvokeVoidAsync("startConfetti"); // קריאה לפונקציה JS שמבצעת את האנימציה
+    }
+    
+    void HandleBackNavigation() // ההחלטה אם לפתוח את הפופ-אפ ״בחזרה למשחקים שלי״ או פשוט לחזור אחורה
+    {
+        if (canSave || contentChanged )  // אם יש שינויים שלא נשמרו
+            showUnsavedChangesPopup = true; // תפתח את הפופ-אפ
+        else
+            Nav.NavigateTo("/GamesList"); // אם הכל שמור פשוט תחזור אחורה
+    }
+
+    async Task SaveAndNavigate() // לחיצה על ״שמירת שינויים״ בפופ-אפ ״בחזרה למשחקים שלי״
+    {
+        if (contentChanged)
+            await SaveContent();
+        if (canSave)
+            await SaveGameSettings();
+        showUnsavedChangesPopup = false;
+        Nav.NavigateTo("/GamesList");
+    }
+
+    void NavigateWithoutSaving() // לחיצה על כפתור ״לא לשמור״ בפופ-אפ ״בחזרה למשחקים שלי״
+    {
+        showUnsavedChangesPopup = false;
+        Nav.NavigateTo("/GamesList");
+    }
+    
+    // ------- העלאת תמונה -------- //
+    
+    // פיצלנו לשתי פונקציות כי לקטגוריה ולפריט יש endpoints שונים בשרת לעדכון התמונה.
+// בנוסף, כל אחת מעדכנת משתנה טעינה נפרד כדי שהספינר יופיע על הכרטיס הנכון.
+    
+    async Task UploadItemFile(InputFileChangeEventArgs e, ItemToSave item)
+    {
+        uploadingItem = item; // בכניסה לפונקציה התמונה בטעינה ושומרים את הפריט הספציפי
+        var file = e.GetMultipleFiles().FirstOrDefault();
+        if (file == null)
+        {
+            uploadingItem = null; // אין מה להראות טעינה
+            return;
+        }
+        if (file.Size > maxFileSize) // במידה וגודל התמונה לא מתאים - ניתן חיווי למשתמש
+        {
+            contentMsg = "התמונה גדולה מדי - מקסימום 4MB";
+            uploadingItem = null; //  עצירה במקרה של שגיאה
+            return;
+        }
+
+        var buffer = new byte[file.Size];
+        await file.OpenReadStream(maxFileSize).ReadAsync(buffer);
+        var imageBase64 = Convert.ToBase64String(buffer);
+
+        var saveRes = await Http.PostAsJsonAsync("api/Media/upload", imageBase64);
+        if (saveRes.IsSuccessStatusCode)
+        {
+            string newFileName = await saveRes.Content.ReadAsStringAsync();
+            item.Content = newFileName;
+            item.IsImage = true;
+            // שמירה מיידית של שם התמונה ב-DB
+            if (item.ID > 0)
+                await Http.PostAsJsonAsync($"api/EditGame/UpdateItemImage/{item.ID}", newFileName);
+            MarkContentChanged();
+        }
+
+        uploadingItem = null; // בסיום הפונקציה התמונה עלתה ואפשר להפסיק אנימציה
+    }
+
+    async Task UploadCategoryFile(InputFileChangeEventArgs e, CategoryToSave cat)
+    {
+        uploadingCategory = cat; // בכניסה לפונקציה התמונה בטעינה
+        var file = e.GetMultipleFiles().FirstOrDefault();
+        if (file == null)
+        {
+            uploadingCategory = null; // אין מה להראות טעינה
+            return;
+        }
+    if (file.Size > maxFileSize)
+        {
+            contentMsg = "התמונה גדולה מדי - מקסימום 4MB";
+            uploadingCategory = null; // אין מה להראות טעינה
+            return;
+        }
+
+        var buffer = new byte[file.Size];
+        await file.OpenReadStream(maxFileSize).ReadAsync(buffer);
+        var imageBase64 = Convert.ToBase64String(buffer);
+
+        var saveRes = await Http.PostAsJsonAsync("api/Media/upload", imageBase64);
+        if (saveRes.IsSuccessStatusCode)
+        {
+            string newFileName = await saveRes.Content.ReadAsStringAsync();
+            cat.Content = newFileName;
+            cat.IsImage = true;
+            // שמירה מיידית של שם התמונה ב-DB
+            if (cat.ID > 0)
+                await Http.PostAsJsonAsync($"api/EditGame/UpdateCategoryImage/{cat.ID}", newFileName);
+            MarkContentChanged();
+        }
+        uploadingCategory = null; // בסיום התמונה כבר עלתה ואפשר להפסיק אנימציה
+
+    }
+
+    void DeleteItemImage(ItemToSave item)
+        // מטרת הפונקציה: לשמור את שמות התמונות שצריך למחוק בעת לחיצה על כפתור שמירת שינויים - כדי שהמקוריות לא יפגעו
+    {
+        if (string.IsNullOrWhiteSpace(item.Content)) return;
+
+        deletedImagePaths.Add(item.Content); // שמירה למחיקה אחרי שמירה
+        item.Content = "";
+        MarkContentChanged();
+    }
+
+    void DeleteCategoryImage(CategoryToSave cat) 
+    // מטרת הפונקציה: לשמור את שמות התמונות שצריך למחוק בעת לחיצה על כפתור שמירת שינויים - כדי שהמקוריות לא יפגעו
+    {
+        if (string.IsNullOrWhiteSpace(cat.Content)) return;
+
+        deletedImagePaths.Add(cat.Content); // שמירה למחיקה אחרי שמירה
+        cat.Content = "";
+        MarkContentChanged();
+    }
+
+}
+
+

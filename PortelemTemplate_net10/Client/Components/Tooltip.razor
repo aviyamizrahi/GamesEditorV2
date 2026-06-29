@@ -1,0 +1,114 @@
+<style>
+    .tooltip-wrapper {
+        position: relative; /* הופך את הדיב הזה לנקודת הייחוס */
+        display: inline-block;
+    }
+
+    .tooltip-box {
+        visibility: hidden;
+        opacity: 0;
+        width: max-content;
+        height: max-content;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%); /* מזיז את הטולטיפ חצי מהרווח של עצמו שמאלה כדי שיהיה בול באמצע */
+        /* 3. מיקום מעל האובייקט (בתחתית שלו) */
+        top: 100%;
+        font-family: "Open Sans";
+        text-align: center;
+        background-color: white;
+        color: #333;
+        padding: 4px 8px;
+        margin: 5px 0;
+        border-radius: 6px;
+        font-size: 14px;
+        border: 1.5px solid black;
+        white-space: normal;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        z-index: 1000;
+    }
+    
+    .tooltip-box ul {
+        margin-bottom: 0;
+    }
+
+    .tooltip-wrapper:hover .tooltip-box {
+        visibility: visible;
+        opacity: 1;
+        transform: translateX(-50%); /* שומר על המירכוז בזמן ה hover */
+    }
+
+    .tooltip-wrapper:hover .tooltip-box.left { /* יש שימוש בקומפוננטת האקורדיון */
+        visibility: visible;
+        opacity: 1;
+        transform: translateX(-32px); 
+    }
+    
+    /* טולטיפ צף — משמש כשהטולטיפ נמצא בתוך אלמנט עם overflow:hidden כמו טבלה עם גלילה.
+   מתמקם לפי מיקום העכבר במסך (position: fixed) ולכן לא נחתך על ידי האלמנט העוטף */
+    .tooltip-fixed {
+        position: fixed;
+        z-index: 99999;
+        pointer-events: none;
+        background-color: white;
+        color: #333;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 14px;
+        border: 1.5px solid black;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        white-space: normal;
+    }
+</style>
+
+
+<div class="tooltip-wrapper @AdditionalClass"
+     @onmousemove="ShowTooltip"
+     @onmouseleave="HideTooltip">
+    @ChildContent
+    @if (!string.IsNullOrEmpty(Text) && !UseFixed)
+    {
+        // מתייחס לטקסט כhtml ולא טקסט רגיל
+        <div class="tooltip-box" style="max-width: @(MaxWidth)px; margin-top: @(MarginTop)px;">
+            @((MarkupString)Text) 
+        </div>
+    }
+</div>
+
+@if (!string.IsNullOrEmpty(Text) && UseFixed && showTooltip)
+{
+    <div class="tooltip-fixed" style="left: @(tooltipX + 12)px; top: @(tooltipY + 12)px; max-width: @(MaxWidth)px;">
+        @((MarkupString)Text)
+    </div>
+}
+
+
+
+@code {
+    [Parameter] public RenderFragment ChildContent { get; set; } // האובייקט עליו יהיה מונח הטולטיפ
+    [Parameter] public string Text { get; set; }
+    [Parameter] public string AdditionalClass { get; set; } = "";
+    [Parameter] public int MaxWidth { get; set; } = 120; // ברירת מחדל של רוחב 120 פיקסלים
+    [Parameter] public int MarginTop { get; set; } = 0; // שימוש במקומות ספציפיים לפי הצורך
+    [Parameter] public bool UseFixed { get; set; } = false; // לא בכל הטולטיפים נרצה להשתמש בזה שצף 
+
+    // בגל בעיה בטבלת המשחקים שלי והגלילה הפנימית היינו צריכות למצוא פיתרון אחר לטולטיפ של הפרסום משחק ספציפית, לאחר ייעוץ עם המתגברת הבנו שזאת יכולה להיות אוםציה טובה, להשתמש במיקום של העכבר ולהציף את הטולטיפ למעלה
+    bool showTooltip = false; 
+    double tooltipX; // מיקום X של העכבר במסך
+    double tooltipY; // מיקום Y של העכבר במסך
+
+    void ShowTooltip(MouseEventArgs e) // מראה את הטולטיפ בכניסה של העכבר לפי המיקום
+    {
+        if (UseFixed)
+        {
+            tooltipX = e.ClientX; // שמירת מיקום X של העכבר
+            tooltipY = e.ClientY; // שמירת מיקום Y של העכבר
+            showTooltip = true; // הצגת הטולטיפ
+        }
+    }
+
+    void HideTooltip(MouseEventArgs e) // נקראת כשהעכבר עוזב את האלמנט
+    {
+        showTooltip = false; // מסתיר את הטולטיפ
+    }
+}

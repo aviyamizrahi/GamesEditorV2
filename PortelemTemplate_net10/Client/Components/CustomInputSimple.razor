@@ -1,0 +1,130 @@
+
+@* ספירת תווים בקטגוריות ובפריטים - לא חלק מEditForm *@
+
+<style>
+    #textarea-cats-itms {
+        resize: none; /* מונע גרירה ידנית של הגודל */
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 16px;
+        text-align: center;
+        padding: 11px 8px 0 8px ; /*Top, Right, Bottom, Left*/
+        box-sizing: border-box;
+        resize: none;
+    }
+
+    #textarea-cats-itms:focus {
+        text-align: right;
+    }
+
+    #textarea-cats-itms::placeholder {
+        color: #bbb;
+        font-size: 14px;
+    }
+    
+    .cat-item-input .char-count {
+        position: absolute;
+        bottom: 0.5px;
+        left: 6px;
+        color: #507AAF;
+        font-size: 12px;
+        font-weight: bold;
+        direction: ltr;
+    }
+</style>
+
+<div class="cat-item-input">
+    @if (isFocused) // להראות את ספירת התווים רק בפוקוס
+    {
+        <span class="char-count @(inputClass == "danger" ? "danger" : "")">@length.ToString()/@MaxLength.ToString()</span>
+    }
+    @* הצגת מספר התווים הנוכחי מתוך המקסימום המותר *@
+    <textarea id="textarea-cats-itms"
+        maxlength="@MaxLength"
+        placeholder="@Placeholder"
+        class="@inputClass"
+        @oninput="OnInput"
+        @onclick:stopPropagation="true"
+        @onfocus="HandleFocus"
+        @onblur="HandleBlur"> @Value </textarea>
+    @* בכל הקלדה עדכון הערך וספירת התווים *@
+    @* בפוקוס על התיבה — בחירת הקטגוריה הרלוונטית *@
+    @* משתנה לפי תקינות הערך בתיבה *@
+
+</div>
+
+@code {
+    [Parameter] public string Value { get; set; } // הערך בתוך תיבת הטקסט
+    [Parameter] public EventCallback<string> ValueChanged { get; set; } // נקרא בכל פעם שיש שינוי בתיבה
+    [Parameter] public EventCallback OnFocus { get; set; } // כשהתיבה מקבלת פוקוס - משמש לבחירת קטגוריה
+    [Parameter] public EventCallback OnBlur { get; set; } // כשיש יציאה מהתיבה
+    [Parameter] public int MaxLength { get; set; } = 16; // מקסימום תווים
+    [Parameter] public int MinLength { get; set; } = 1; // מינימום תווים
+    [Parameter] public string Placeholder { get; set; } = ""; // פלייסהולדר לתיבה - משתנה בין פריטים לקטגוריות
+
+
+    int length = 0; // מתעדכן בכל הקלדה - אורך הטקסט
+    string inputClass = ""; //  good-input או dangerinput 
+    bool isFocused = false; // לצורך חיווי של ספירת התווים
+
+    protected override void OnParametersSet() // בכל פעם שפרמטר מתעדכן
+    {
+        if (Value != null)
+        {
+            length = Value.Length;
+            // עדכון ספירת התווים לפי הערך הנוכחי
+
+            if (length >= MinLength)
+                inputClass = "good-input";
+            else
+                inputClass = "danger-input";
+            // קביעת הסגנון לפי תקינות האורך
+        }
+    }
+
+    async Task HandleFocus() // מופעל בפוקוס: מעדכן את המשתנה ומרנדר שוב את הפרמטר
+    {
+        isFocused = true;
+        await OnFocus.InvokeAsync();
+    }
+
+    async Task HandleBlur()
+    {
+        isFocused = false;
+        await OnBlur.InvokeAsync();
+    }
+
+
+    async Task OnInput(ChangeEventArgs e) // נקראת בכל הקלדה - מקביל onkeyup בקומפוננטה CustomInputText
+    {
+        if (e.Value != null)
+        {
+            string val = e.Value.ToString();
+            // קריאת הערך החדש
+
+            length = val.Length;
+            // עדכון ספירת התווים
+
+            if (length >= MinLength)
+                inputClass = "good-input";
+            else
+                inputClass = "danger-input";
+            // עדכון הסגנון לפי האורך החדש
+
+            await ValueChanged.InvokeAsync(val);
+            // שליחת הערך החדש לרכיב האב כדי לעדכן את המשתנה שם
+        }
+    }
+    
+    async Task ClearValue() // ניקוי של הערך בלחיצה על כפתור איקס 
+    {
+        await ValueChanged.InvokeAsync("");
+        length = 0;
+        inputClass = "danger-input";
+    }
+
+}
