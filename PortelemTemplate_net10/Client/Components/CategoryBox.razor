@@ -259,13 +259,13 @@
         border: 3px solid #eee;
         border-top: 3px solid #911627;
         border-radius: 50%;
-        animation: spin 0.08s linear infinite;
+        animation: spin 0.2s linear infinite;
     }
 
 
 </style>
 
-<div class="category-card-wrapper" @key="Cat">
+<div class="category-card-wrapper" @key="Cat" tabindex="0">
     <Tooltip Text="מחיקת קטגוריה" MaxWidth="112" AdditionalClass="cat-delete-btn">
         <button class="delete-btn @(isTrashHovered ? "delete-btn-danger" : "")"
                 type="button"
@@ -273,7 +273,8 @@
                 @onclick:stopPropagation="true"
                 disabled="@(!CanDelete)"
                 @onmouseenter="() => isTrashHovered = true"
-                @onmouseleave="() => isTrashHovered = false">
+                @onmouseleave="() => isTrashHovered = false"
+                tabindex="0">
             @* אייקון פח *@
             <svg width="20" height="22" viewBox="0 0 16 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4.20868 18C3.05766 18 2.28446 17.2618 2.22295 16.1545L1.63427 4.22318H0.562328C0.263591 4.22318 0 3.97425 0 3.66524C0 3.36481 0.263591 3.1073 0.562328 3.1073H4.39319V1.83691C4.39319 0.695279 5.14882 0 6.39649 0H9.58594C10.8336 0 11.5892 0.695279 11.5892 1.83691V3.1073H15.4377C15.7452 3.1073 16 3.35622 16 3.66524C16 3.96567 15.7452 4.22318 15.4377 4.22318H14.3657L13.777 16.1459C13.7155 17.2618 12.9336 18 11.7913 18H4.20868ZM5.59692 1.90558V3.1073H10.3943V1.90558C10.3943 1.41631 10.0516 1.09871 9.51565 1.09871H6.46678C5.93959 1.09871 5.59692 1.41631 5.59692 1.90558ZM4.31411 16.8841H11.6771C12.1867 16.8841 12.5645 16.5236 12.5821 16.0258L13.1532 4.22318H2.81164L3.40912 16.0258C3.43548 16.515 3.82208 16.8841 4.31411 16.8841ZM5.52663 15.4249C5.25426 15.4249 5.06096 15.2532 5.05217 14.9871L4.79736 6.18884C4.78858 5.92275 4.98188 5.75107 5.27183 5.75107C5.53542 5.75107 5.73751 5.92275 5.74629 6.18884L6.0011 14.9871C6.00988 15.2446 5.81658 15.4249 5.52663 15.4249ZM8.00439 15.4249C7.71444 15.4249 7.51236 15.2446 7.51236 14.9871V6.18884C7.51236 5.93133 7.71444 5.75107 8.00439 5.75107C8.29434 5.75107 8.48764 5.93133 8.48764 6.18884V14.9871C8.48764 15.2446 8.29434 15.4249 8.00439 15.4249ZM10.4734 15.4335C10.1746 15.4335 9.99012 15.2446 9.9989 14.9871L10.2537 6.18884C10.2625 5.92275 10.4646 5.75107 10.7282 5.75107C11.0181 5.75107 11.2114 5.93133 11.2026 6.19743L10.9478 14.9871C10.939 15.2532 10.7457 15.4335 10.4734 15.4335Z" fill="black"/>
@@ -508,6 +509,7 @@
     [Parameter] public EventCallback OnImageDelete { get; set; } // בזמן מחיקת תמונה
     [Parameter] public EventCallback<InputFileChangeEventArgs> OnImageUpload { get; set; } // בזמן העלאת תמונה
     [Parameter] public EventCallback OnContentChanged { get; set; } // בזמן שיש שינוי כלשהו בתוכן - משפיע על שמירת שינויים
+    // בתוך עמוד עריכה יש פונקציה שמופעלת אחרי כל שינוי של תוכן
     [Parameter] public string CatInputId { get; set; } // שימוש בעיקר בhtml
     [Parameter] public bool IsInvalid { get; set; } = false; // אם יש שגיאה אז נרצה להציג חיווי ויזואלי למשתמש
     [Parameter] public EventCallback OnTextClear { get; set; } // לחיצה על איקס של טקסט
@@ -521,8 +523,5 @@
 
     // תמיכה ב-Hover עבור כפתור הפח
     private bool isHoveredBlazor = false;
-    protected override void OnInitialized()
-    {
-        // קוד אתחול במידת הצורך
-    }
+    
 }

@@ -8,9 +8,9 @@
 @inject HttpClient Http;
 @inject NavigationManager Nav;
 
-<head>
-    <title>המשחקים שלי - איקס מיון</title>
-</head>
+
+<PageTitle>המשחקים שלי - איקס מיו</PageTitle>
+
 
 <h1>המשחקים שלי</h1>
 
@@ -138,7 +138,7 @@ else
 }
 
 
-@if (openDeletePopUp)
+@if (openDeletePopUp) // בלחיצה על הפח של מחיקת משחק
 {
     <PopUp IsVisible="@openDeletePopUp"
            Title="מחיקת משחק"
@@ -146,22 +146,23 @@ else
            CancelText="ביטול"
            OnConfirm="DeleteGame"
            OnCancel="ClosePopup"
-           OnClose="ClosePopup">
+           OnClose="ClosePopup"
+           ShowWarningIcon="@(gameToDelete.CategoriesCount > 0)">
         @if (gameToDelete.CategoriesCount > 0)
         {
-            <p>המשחק "@gameToDelete.GameName"</p>
-            <p>מכיל
+            <span>המשחק "@gameToDelete.GameName"</span>
+            <span>מכיל
                 @gameToDelete.CategoriesCount
                 קטגוריות
                 ו
                 @gameToDelete.ItemsCount
                 פריטים סה״כ,
-            </p>
-            <p>האם למחוק את המשחק בכל זאת?</p>
+            </span>
+            <span>האם למחוק את המשחק בכל זאת?</span>
         }
         else
         {
-            <p>האם ברצונך למחוק את המשחק "@gameToDelete.GameName"?</p>
+            <span>האם ברצונך למחוק את המשחק "@gameToDelete.GameName"?</span>
         }
     </PopUp>
 }

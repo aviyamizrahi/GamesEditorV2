@@ -1,6 +1,6 @@
 ﻿@page "/"
 
-<PageTitle>פרויקט סופר מגניב</PageTitle>
+<PageTitle>משחק - איקס מיון</PageTitle>
 
 <!-- ניהול משתמשים - תצוגה שונה לפי משתמש -->
 
@@ -12,10 +12,9 @@
             <h1>היי @user.FirstName @user.LastName</h1>
         }
     </Authorized>
-        <!-- ניהול משתמשים - משתמש לא מחובר -->
+    <!-- ניהול משתמשים - משתמש לא מחובר -->
     <NotAuthorized>
         <h1>אין משתמש מחובר</h1>
-        <p>אפשר להציג פה תוכן כללי.</p>
     </NotAuthorized>
 </AuthorizeView>
 
@@ -24,5 +23,5 @@
 
     [CascadingParameter]
     private User user { get; set; }
-    
+
 }

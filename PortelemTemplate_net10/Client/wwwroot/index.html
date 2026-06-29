@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he">
 
 <head>
     <meta charset="utf-8" />
@@ -12,6 +12,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="Images/favicon.png" />
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
 </head>
 
 <body>
@@ -23,54 +26,34 @@
         <a class="dismiss">🗙</a>
     </div>
     <script>
+        // שימוש בספריית קונפטי - פונקצייה של קונפטי בJS
         window.triggerFileClick = function(id) {
             document.getElementById(id).click();
         }
 
         window.startConfetti = function() {
-            // חקירה עצמית: בעזרת בינה מלאכותית בנינו פונקציה שתציג לנו קונפטי על המסך בזמן פרסום ראשוני של המשחק
-            const ww = window.innerWidth; // רוחב המסך
-            const wh = window.innerHeight; // גובה המסך
+            var end = Date.now() + (3 * 1000);
+            var colors = ['#911627', '#F6F2EB'];
 
-            for (let i = 0; i < 50; i++) { // יצירת 50 חלקיקים
-                setTimeout(() => { // השהייה קטנה בין כל חלקיק ליצירת אפקט הדרגתי
-                    const p = document.createElement('div');
-                    p.textContent = Math.random() > 0.5 ? '✕' : '○'; // בחירה אקראית בין איקס לעיגול
-
-                    const fromLeft = Math.random() > 0.5; // האם החלקיק יוצא מצד שמאל או ימין
-                    p.style.left = (fromLeft ? 0 : ww) + 'px'; // נקודת התחלה בצד המתאים
-                    p.style.top = (Math.random() * wh) + 'px'; // גובה אקראי על המסך
-
-                    const tx = fromLeft ? (200 + Math.random() * 400) : -(200 + Math.random() * 400); // יותר מרחק לתוך המסך
-                    const ty = (Math.random() - 0.5) * 100; // פחות תזוזה אנכית
-                    const dur = 700 + Math.random() * 600; // משך האנימציה באלפיות שנייה
-                    const rot = (Math.random() - 0.5) * 540; // סיבוב אקראי
-
-                    p.style.cssText = `
-                position: fixed;
-                font-size: 28px;
-                font-weight: 900;
-                color: #222;
-                pointer-events: none; /* מונע מהחלקיקים להפריע ללחיצות */
-                z-index: 99999; /* מעל כל שאר האלמנטים */
-            `;
-
-                    p.style.transition = `transform ${dur}ms ease-out, opacity ${dur}ms ease-out`;
-                    p.style.opacity = '1';
-                    p.style.top = (Math.random() * wh * 0.7) + 'px'; // רק ב-70% העליונים של המסך
-                    p.style.fontSize = (24 + Math.floor(Math.random() * 20)) + 'px'; // גודל אקראי בין 24-44px
-                    document.body.appendChild(p);
-
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => { // שני frames כדי שהדפדפן יספיק לרשום את המצב ההתחלתי לפני האנימציה
-                            p.style.transform = `translate(${tx}px, ${ty}px) rotate(${rot}deg)`;
-                            p.style.opacity = '0'; // דעיכה בסוף האנימציה
-                        });
-                    });
-
-                    setTimeout(() => p.remove(), dur + 100); // הסרת האלמנט מה-DOM אחרי סיום האנימציה
-                }, i * 15); // 15ms השהייה בין כל חלקיק
-            }
+            (function frame() {
+                confetti({
+                    particleCount: 2,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: colors
+                });
+                confetti({
+                    particleCount: 2,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: colors
+                });
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
         }
     </script>
     <script src="_framework/blazor.webassembly.js"></script>

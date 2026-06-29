@@ -159,6 +159,12 @@
     color: black !important;
 }
 
+.msg[b-2lh46oy4mw] {
+    font-weight: bold;
+    margin-top: 10px;
+    color: #507AAF;
+}
+
 /* -------- עריכת תוכן -------*/
 .publish-conditions[b-2lh46oy4mw] {
     display: flex;
@@ -171,12 +177,18 @@
 .items-grid[b-2lh46oy4mw] {
     display: flex;
     flex-wrap: wrap;
-    max-width: 800px;
-    min-width: 800px;
+    max-width: 840px;
+    min-width: 840px;
     /* 4 פריטים + מרווחים */
     direction: rtl;
+    max-height: 250px; /* גובה של 2 שורות פריטים */
+    overflow-y: auto;
+    scroll-behavior: smooth;
 }
 
+
+
+/* פס הhr בין הקטגוריות לפריטים */ 
 [b-2lh46oy4mw].between-itms-to-cats {
     color: black;
     opacity: 70%;
@@ -207,6 +219,7 @@
     align-items: flex-start;
     flex: 1;
     margin-top: 20px;
+   
 }
 
 .items-grid-col p[b-2lh46oy4mw] {
@@ -216,7 +229,7 @@
 .items-section[b-2lh46oy4mw] {
     display: flex;
     flex-direction: row;
-    gap: 60px;
+    gap: 35px;
     align-items: stretch;
     padding: 0 16px;
 }
@@ -224,7 +237,7 @@
     position: sticky;
     top: 0;
     align-self: flex-start;
-    margin-left: 52px;
+    margin-left: 20px;
 }
 
 .board-text-wrapper[b-2lh46oy4mw] {

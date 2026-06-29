@@ -8,9 +8,8 @@
 @inject IJSRuntime JS
 
 
-<head>
-    <title>עריכת משחק - איקס מיון</title>
-</head>
+<PageTitle>עריכת משחק - איקס מיון</PageTitle>
+
 
 <style>
     .selected-category {
@@ -134,7 +133,7 @@
                         </label>
                     </div>
                     <ValidationMessage For="@(() => gameToEdit.Instructions)"/>
-                    <p class="msg settings-msg">@msg</p>
+                    <p class="msg">@msg</p>
                 </div>
             </EditForm>
         </div>
@@ -207,7 +206,7 @@
                             Text=""
                             OnClick="AddItem"/>
                 }
-                <h4>פריטים</h4>
+                <h3>פריטים</h3>
             </div>
             
             <div class="items-grid-col">
@@ -218,6 +217,7 @@
 
                 else
                 {
+                    <div class="items-grid-wrapper"></div>
                     <div class="items-grid">
                         @for (int i = 0; i < selectedCategory.Items.Count; i++)
                         {
@@ -281,7 +281,7 @@
                             Text=""
                             OnClick="AddCategory"/>
                 }
-                <h4>קטגוריות</h4>
+                <h3>קטגוריות</h3>
             </div>
             <div class="cats-grid">
                 @for (int i = 0; i < categories.Count; i++)
@@ -289,7 +289,7 @@
                 {
                     CategoryToSave cat = categories[i]; // שימוש יותר נוח בקטגוריה הנוכחית בלולאה
                     string catInputId = "cat_" + i.ToString(); // שימוש באינדקס במקום ID כדי למנוע התנגשות בין קטגוריות ריקות
-
+                    <div></div>
                     <CategoryBox @key="cat"
                                  Cat="cat"
                                  IsSelected="@(selectedCategory == cat)"
@@ -312,7 +312,7 @@
             </div>
         </div>
 
-        <p>@contentMsg</p>
+        <p class="msg">@contentMsg</p>
     </ChildContent>
 </AccordionSection>
 
@@ -335,18 +335,21 @@
        CancelText="ביטול"
        OnConfirm="() => DeleteCategory(categoryToDelete)"
        OnCancel="() => showDeleteCategoryPopup = false"
-       OnClose="() => showDeleteCategoryPopup = false">
+       OnClose="() => showDeleteCategoryPopup = false"
+       ShowWarningIcon="@(deleteBreaksPublish)">
     @if (deleteBreaksPublish)
     {
-        <p>לקטגוריה זו קיימים
+        <span>לקטגוריה זו קיימים
             @categoryToDeleteItemsCount
-            פריטים, המחיקה תגרום לאי עמידה בתנאי הפרסום, האם למחוק בכל זאת?
-        </p>
+            פריטים,</span>
+        <span>המחיקה תגרום לאי עמידה בתנאי הפרסום, האם למחוק בכל זאת?</span>
+        <CategoryPreview Cat="categoryToDelete"></CategoryPreview>
     }
     else
     {
-        <span>לקטגוריה זו קיימים @categoryToDeleteItemsCount פריטים,</span><br/>
+        <span>לקטגוריה זו קיימים @categoryToDeleteItemsCount פריטים,</span>
         <span>האם למחוק בכל זאת?</span>
+        <CategoryPreview Cat="categoryToDelete"></CategoryPreview>
     }
 </PopUp>
 
@@ -391,6 +394,8 @@
     List<int> deletedCategoryIds = new List<int>();
     List<int> deletedItemIds = new List<int>();
     bool hasItemsInEmptyCategory = false; // אם יש פריטים בקטגוריה ללא תוכן לא נאפשר למשתמש לשמור ונציג טולטיפ הסבר
+    List<int> catsIdsWithItemsEmptyContent = new List<int>(); // רשימה של מספרי id של קטגוריות שהן ריקות מתוכן אבל יש בהן פריטים
+
     
     // ── ספירת סבבים ── //
     int totalItems = 0; // ספירת פריטים
@@ -482,59 +487,64 @@
         // מטרת הפונקציה: טעינת תוכן המשחק מהשרת — קטגוריות ופריטים
 // בנוסף: השלמת פלייסהולדרים למינימום, וחישוב עמידה בתנאי פרסום        
     {
+        gameIdToEdit = gameToEdit.ID;
         categories = new List<CategoryToSave>();
         selectedCategory = null;
+        if (gameToEdit.ID > 0)
+        {
         // מאפס את הרשימה ואת הקטגוריה הבחורה כל טעינה מחדש ומונע כפילויות
-        var res = await Http.GetAsync($"api/EditGame/GetGameContent/{gameIdToEdit}");
+        var res = await Http.GetAsync($"api/EditGame/GetGameContent/{gameToEdit.ID}");
         if (res.IsSuccessStatusCode)
         {
-            var fullGame = await res.Content.ReadFromJsonAsync<FullGameToSave>();
-            if (fullGame != null)
-                categories = fullGame.Categories; // כל המידע נמצא פה ברשימת הקטגוריות - כל קטגוריה מכילה רשימת פריטים
-            else
-                categories = new List<CategoryToSave>(); // אם אין תוכן כלל אז תיצור רשימה ריקה - ישמש לבדיקה לפלייסהולדרים
+        var fullGame = await res.Content.ReadFromJsonAsync<FullGameToSave>();
+        if (fullGame != null)
+        categories = fullGame.Categories; // כל המידע נמצא פה ברשימת הקטגוריות - כל קטגוריה מכילה רשימת פריטים
+        else
+        categories = new List<CategoryToSave>(); // אם אין תוכן כלל אז תיצור רשימה ריקה - ישמש לבדיקה לפלייסהולדרים
         }
 
         // השלמה למינימום 3 קטגוריות עם פלייסהולדרים ריקים
         while (categories.Count < minCategories)
         {
-            categories.Add(new CategoryToSave { Items = new List<ItemToSave>() });
-            // כל עוד יש לנו פחות מ3 קטגוריות תשלים מידע ריק כדי להראות פלייסהולדרים
+        categories.Add(new CategoryToSave { Items = new List<ItemToSave>() });
+        // כל עוד יש לנו פחות מ3 קטגוריות תשלים מידע ריק כדי להראות פלייסהולדרים
         }
 
-        
+
         int validCategoriesCount = 0; // לצורך הצגת עמידות בתנאי פרסום
         int categoriesWithContent = 0; // לצורך הצגת עמידות בתנאי פרסום
 
         foreach (var cat in categories)
         {
-            EnsureMinItems(cat); // השלמת פריטים למינימום 6 לכל קטגוריה 
-    
-            if (!string.IsNullOrWhiteSpace(cat.Content)) // אם יש תוכן בקטגוריה
-            {
-                categoriesWithContent++; // לסכום את הקטגוריות שיש בהן תוכן
-        
-                int itemsWithContent = 0; // פריטים שיש בהם תוכן
-                foreach (var item in cat.Items) // מעבר על כל הפריטים בקטגוריה
-                {
-                    if (!string.IsNullOrWhiteSpace(item.Content)) // אם יש תוכן 
-                        itemsWithContent++; // לסכום 
-                }
-                if (itemsWithContent >= minItems) // אם יש לפחות 6 פריטים בקטגוריה בעלי תוכן
-                    validCategoriesCount++; // הקטגוריה נספרת כאחת שעומדת בתנאים
-            }
+        EnsureMinItems(cat); // השלמת פריטים למינימום 6 לכל קטגוריה 
+
+        if (!string.IsNullOrWhiteSpace(cat.Content)) // אם יש תוכן בקטגוריה
+        {
+        categoriesWithContent++; // לסכום את הקטגוריות שיש בהן תוכן
+
+        int itemsWithContent = 0; // פריטים שיש בהם תוכן
+        foreach (var item in cat.Items) // מעבר על כל הפריטים בקטגוריה
+        {
+        if (!string.IsNullOrWhiteSpace(item.Content)) // אם יש תוכן 
+        itemsWithContent++; // לסכום 
+        }
+        if (itemsWithContent >= minItems) // אם יש לפחות 6 פריטים בקטגוריה בעלי תוכן
+        validCategoriesCount++; // הקטגוריה נספרת כאחת שעומדת בתנאים
+        }
         }
 
         hasMinCategories = categoriesWithContent >= minCategories; // תנאי: אם מספר הקטגוריות שעומדות בתנאים יותר גדול או שווה למינימום אז המשתנה חיובי 
         hasMinItemsPerCategory = categoriesWithContent > 0 && validCategoriesCount == categoriesWithContent;
         // אם יש 3 קטגוריות עם תוכן מינימום ושלותשתן עומדות בתנאים של מינימום פריטים לקטגוריה
-        CalcStats(); 
+        CalcStats();
+        }
+         
     }
 
     async Task ConfirmPublish()
 // אישור פרסום המשחק לאחר לחיצה על כפתור האישור בפופ אפ     
     {
-        wasEverPublished = false;
+       
         PublishGame publishData = new PublishGame { ID = gameToEdit.ID, IsPublish = true };
         // יוצרים משתנה חדש עם מזהה המשחק ו-IsPublish=true כדי לפרסם
 
@@ -801,7 +811,7 @@
     }
 
     async Task SaveGameSettings()
-        // בלחיצה על ״שמירה״
+    // מטרת הפונקציה: בלחיצה על כפתור ״שמירה״ בהגדרות המשחק נשמור את הנתונים החדשים או המעודכנים של המשחק
     {
         gameToEdit.GameName = gameToEdit.GameName.Trim();
         gameToEdit.Instructions = gameToEdit.Instructions.Trim();
@@ -814,10 +824,9 @@
             if (newGameRes.IsSuccessStatusCode)
             {
                 var newGame = await newGameRes.Content.ReadFromJsonAsync<GameToTableDTO>();
-                gameToEdit.ID = newGame.ID;
-                displayName = gameToEdit.GameName;
-                msg = "המשחק נוצר בהצלחה";
-                msg = "";
+                gameToEdit.ID = newGame.ID; // נעדכן מזהה משחק
+                displayName = gameToEdit.GameName; // נשים את שם המשחק בכותרת
+                msg = "המשחק נוצר בהצלחה"; // נעדכן את המשתמש על יצירת משחק חדש בהצלחה
                 canSave = false;
                 originalGame = new GameToAddDTO // שמירת גרסה לתוך המשתנה
                 {
@@ -825,7 +834,15 @@
                     RoundTime = gameToEdit.RoundTime,
                     Instructions = gameToEdit.Instructions
                 };
-                await LoadGameContent(); // עכשיו יש ID אז אפשר לטעון פלייסהולדרים
+                
+               // כדי לטעון את העמוד מחדש עם הid החדש, נשתמש בNav שכבר הזרקנו לעמוד פה
+               // בהתחלה הגדרנו forceLoad: false אבל אז נתקלנו בבעיה ויזואלית בתיבת הטקסט של הקטגוריה והפריטים והבנו שצריך לרענן את העמוד אחרי שמירה מוצלחת של משחק חדש - בשמירה של משחק קיים אין צורך לרענן 
+                Nav.NavigateTo($"/EditGame/{gameToEdit.ID}", forceLoad: true);
+                
+            }
+            else
+            {
+                msg = "משהו השתבש, המשחק לא נוצר";
             }
         }
         else
@@ -879,6 +896,7 @@
         // מטרפת הפונקציה היא לבדוק האם יש פריטים בעלי תוכן בתוך קטגוריה שהיא ריקה
         // לא ניתן למשתמש לשמור את התוכן במקרה כזה
     {
+        catsIdsWithItemsEmptyContent = new List<int>(); // איפוס של הרשימה
         hasItemsInEmptyCategory = false; // איפוס
         foreach (var cat in categories) // מעבר על הקטגוריות
         {
@@ -886,10 +904,10 @@
             {
                 foreach (ItemToSave item in cat.Items) // מעבר על הפריטים בתוך הקטגוריה
                 {
-                    if (!string.IsNullOrWhiteSpace(item.Content)) // אם יש בהם תוכן
+                    if (!string.IsNullOrWhiteSpace(item.Content)) // אם יש בפריטים תוכן
                     {
                         hasItemsInEmptyCategory = true; // המשתנה חיובי
-                        return; // אין צורך לעבור על שאר הפריטים אם יש פריט אחד לפחות בעל תוכן
+                        catsIdsWithItemsEmptyContent.Add(cat.ID); // תוסיף את מספר הid של הקטגוריה לרשימה של הקטגוריות הריקות
                     }
                 }
             }
@@ -1041,7 +1059,7 @@
             // שמירה מיידית של שם התמונה ב-DB
             if (item.ID > 0)
                 await Http.PostAsJsonAsync($"api/EditGame/UpdateItemImage/{item.ID}", newFileName);
-            MarkContentChanged();
+            MarkContentChanged(); // עדכון שהתוכן השתנה
         }
 
         uploadingItem = null; // בסיום הפונקציה התמונה עלתה ואפשר להפסיק אנימציה

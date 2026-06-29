@@ -1,10 +1,134 @@
-.navbar-dark{
-    background-color: gray;
+.navbar-wrapper {
+    background-color: #EBE3D8;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+    width: 100%;
+    direction: rtl;
+}
 
-}::deep a.nav-link, button{
-     color: white;
- }
-::deep a.nav-link:hover, button:hover{
-    text-decoration: underline;
-    color: white;
+.navbar-inner {
+    display: flex;
+    align-items: center;
+    padding: 0 40px;
+    margin-top: 6px;
+    height: 80px;
+    gap: 20px;
+    font-family: Alef;
+    font-weight: 400;
+    font-size: 18px;
+}
+
+.navbar-logo img {
+    height: 54px;
+    object-fit: contain;
+    margin-top: 8px;
+}
+
+.navbar-divider {
+    width: 1.3px;
+    height: 24px;
+    background-color: black;
+}
+
+.navbar-username {
+    font-size: 18px;
+    white-space: nowrap;
+}
+
+.navbar-links {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    margin-right: auto;
+}
+.nav-link-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+::deep .nav-link {
+    color: black;
+    text-decoration: none;
+    padding: 0 4px 3px 4px;
+    border-bottom: 2px solid transparent;
+    transition: border-bottom 0.15s ease;
+}
+
+::deep .nav-link:hover {
+    border-bottom: 2px solid black ;
+    
+}
+
+::deep .nav-link.active {
+    color: #507AAF;
+    font-weight: 700;
+    border-bottom: 2px solid #507AAF;
+}
+
+.navbar-logout {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: black;
+    padding-bottom: 3px;
+    border-bottom: 2px solid transparent;
+    transition: border-bottom 0.15s ease;
+}
+
+.navbar-logout:hover {
+    border-bottom: 2px solid black;
+}
+
+/* ״איך משחקים״ פופאפ */
+/* העיצוב חל גם על הפופ אפ של ״אודות״ */
+
+.how-to-play-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.how-to-play-box {
+    position: relative;
+    width: 600px;
+    text-align: center;
+    direction: rtl;
+}
+
+.how-to-play-img {
+    width: 100%;
+    display: block;
+    border-radius: 4px;
+}
+
+.how-to-play-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 24px 32px;
+    box-sizing: border-box;
+}
+
+.how-to-play-close {
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    z-index: 20;
+    padding: 0;
+}
+
+.how-to-play-title {
+    font-size: 22px;
+    font-weight: 700;
 }

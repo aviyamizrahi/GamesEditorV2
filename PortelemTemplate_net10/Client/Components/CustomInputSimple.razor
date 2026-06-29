@@ -27,9 +27,9 @@
     }
     
     .cat-item-input .char-count {
-        position: absolute;
-        bottom: 0.5px;
-        left: 6px;
+        position: absolute !important;
+        bottom: 0.5px !important;
+        left: 6px !important;
         color: #507AAF;
         font-size: 12px;
         font-weight: bold;
@@ -40,7 +40,7 @@
 <div class="cat-item-input">
     @if (isFocused) // להראות את ספירת התווים רק בפוקוס
     {
-        <span class="char-count @(inputClass == "danger" ? "danger" : "")">@length.ToString()/@MaxLength.ToString()</span>
+        <span class="char-count">@length.ToString()/@MaxLength.ToString()</span>
     }
     @* הצגת מספר התווים הנוכחי מתוך המקסימום המותר *@
     <textarea id="textarea-cats-itms"
@@ -50,7 +50,7 @@
         @oninput="OnInput"
         @onclick:stopPropagation="true"
         @onfocus="HandleFocus"
-        @onblur="HandleBlur"> @Value </textarea>
+        @onblur="HandleBlur">@Value</textarea>
     @* בכל הקלדה עדכון הערך וספירת התווים *@
     @* בפוקוס על התיבה — בחירת הקטגוריה הרלוונטית *@
     @* משתנה לפי תקינות הערך בתיבה *@
@@ -70,21 +70,7 @@
     int length = 0; // מתעדכן בכל הקלדה - אורך הטקסט
     string inputClass = ""; //  good-input או dangerinput 
     bool isFocused = false; // לצורך חיווי של ספירת התווים
-
-    protected override void OnParametersSet() // בכל פעם שפרמטר מתעדכן
-    {
-        if (Value != null)
-        {
-            length = Value.Length;
-            // עדכון ספירת התווים לפי הערך הנוכחי
-
-            if (length >= MinLength)
-                inputClass = "good-input";
-            else
-                inputClass = "danger-input";
-            // קביעת הסגנון לפי תקינות האורך
-        }
-    }
+    
 
     async Task HandleFocus() // מופעל בפוקוס: מעדכן את המשתנה ומרנדר שוב את הפרמטר
     {

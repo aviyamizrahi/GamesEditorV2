@@ -1,0 +1,104 @@
+@using AuthTemplate.Shared.EditGameContentDTOs
+
+@* קומפוננטה להצגת תצוגה מקדימה של קטגוריה - בלי אינטראקציות, רק ויזואלית *@
+@* משמשת אותנו בפופ אם מחיקת קטגוריה *@
+
+<style>
+    .cat-preview-box {
+        position: relative;
+        width: 137px;
+        height: 102px;
+        margin-top: 15px;
+    }
+
+    .cat-preview-content {
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 70%;
+        height: 80%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        text-align: center;
+    }
+
+    .cat-preview-img {
+        max-width: 90%;
+        max-height: 90%;
+        object-fit: contain;
+    }
+</style>
+
+<div class="cat-preview-box">
+    @* SVG של הקופסה של הקטגוריה *@
+    <svg width="115" height="86" viewBox="0 0 115 86" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M103.971 0.125L114.771 16.9775H0.239258L12.0146 0.125H103.971Z" fill="#E5AC77" stroke="black" stroke-width="0.25"/>
+        <path d="M85.7363 7.16699L85.8838 7.31738L86.46 7.90723L87.29 8.75684H27.6045L28.5615 7.88672L29.209 7.29688L29.3525 7.16699H85.7363Z" fill="black" stroke="black"/>
+        <mask id="path-3-inside-1_1532_800" fill="white">
+            <path d="M0 17.1016H115V85.5105H0V17.1016Z"/>
+        </mask>
+        <path d="M0 17.1016H115V85.5105H0V17.1016Z" fill="#E5AC77"/>
+        <path d="M115 85.5105V85.7605H115.25V85.5105H115ZM0 85.5105H-0.25V85.7605H0V85.5105ZM115 17.1016H114.75V85.5105H115H115.25V17.1016H115ZM115 85.5105V85.2605H0V85.5105V85.7605H115V85.5105ZM0 85.5105H0.25V17.1016H0H-0.25V85.5105H0Z" fill="black" mask="url(#path-3-inside-1_1532_800)"/>
+        <rect x="9.46484" y="23.0986" width="95.6133" height="56.6394" fill="white"/>
+        <g filter="url(#filter0_n_1532_800)">
+            <rect width="18.2314" height="2.99657" transform="matrix(-0.707114 0.7071 -0.707114 -0.7071 20.3184 22.1006)" fill="#EAEAEA"/>
+        </g>
+        <g filter="url(#filter1_n_1532_800)">
+            <rect width="18.2314" height="2.99657" transform="matrix(0.707114 0.7071 0.707114 -0.7071 94.165 21.582)" fill="#EAEAEA"/>
+        </g>
+        <defs>
+            <filter id="filter0_n_1532_800" x="5.30762" y="19.9814" width="15.0107" height="15.0107" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+                <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+                <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+                <feTurbulence type="fractalNoise" baseFrequency="2 2" stitchTiles="stitch" numOctaves="3" result="noise" seed="4861" />
+                <feColorMatrix in="noise" type="luminanceToAlpha" result="alphaNoise" />
+                <feComponentTransfer in="alphaNoise" result="coloredNoise1">
+                    <feFuncA type="discrete" tableValues="1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "/>
+                </feComponentTransfer>
+                <feComposite operator="in" in2="shape" in="coloredNoise1" result="noise1Clipped" />
+                <feFlood flood-color="rgba(0, 0, 0, 0.25)" result="color1Flood" />
+                <feComposite operator="in" in2="noise1Clipped" in="color1Flood" result="color1" />
+                <feMerge result="effect1_noise_1532_800">
+                    <feMergeNode in="shape" />
+                    <feMergeNode in="color1" />
+                </feMerge>
+            </filter>
+            <filter id="filter1_n_1532_800" x="94.165" y="19.4629" width="15.0107" height="15.0107" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+                <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+                <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+                <feTurbulence type="fractalNoise" baseFrequency="2 2" stitchTiles="stitch" numOctaves="3" result="noise" seed="4861" />
+                <feColorMatrix in="noise" type="luminanceToAlpha" result="alphaNoise" />
+                <feComponentTransfer in="alphaNoise" result="coloredNoise1">
+                    <feFuncA type="discrete" tableValues="1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "/>
+                </feComponentTransfer>
+                <feComposite operator="in" in2="shape" in="coloredNoise1" result="noise1Clipped" />
+                <feFlood flood-color="rgba(0, 0, 0, 0.25)" result="color1Flood" />
+                <feComposite operator="in" in2="noise1Clipped" in="color1Flood" result="color1" />
+                <feMerge result="effect1_noise_1532_800">
+                    <feMergeNode in="shape" />
+                    <feMergeNode in="color1" />
+                </feMerge>
+            </filter>
+        </defs>
+    </svg>
+
+
+    @* התוכן שיופיע בתוך הקופסה - תמונה או טקסט לפי סוג הקטגוריה *@
+    <div class="cat-preview-content">
+        @if (Cat.IsImage && !string.IsNullOrWhiteSpace(Cat.Content))
+        {
+            <img src="uploadedFiles/@Cat.Content" alt="קטגוריה" class="cat-preview-img" />
+        }
+        else if (!string.IsNullOrWhiteSpace(Cat.Content))
+        {
+            <span>@Cat.Content</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public CategoryToSave Cat { get; set; } // הקטגוריה שרוצים להציג שהיא מכילה את כל התוכן
+}
