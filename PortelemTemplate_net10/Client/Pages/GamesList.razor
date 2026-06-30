@@ -294,11 +294,11 @@ else
 
         if (userRes.IsSuccessStatusCode)
         {
-            game.IsPublish = !game.IsPublish; // שינוי ויזואלי 
+            game.IsPublish = !game.IsPublish; // שינוי ויזואלי מקומי בעמוד 
         }
         else
         {
-            string error = await userRes.Content.ReadAsStringAsync(); // אם יש איזשהי בעיה
+            string error = await userRes.Content.ReadAsStringAsync(); // אם יש איזשהי בעיה אז נראה להציג הודעה
             if (error == "This game cannot be published")
             {
                 game.IsPublish = false;
@@ -307,13 +307,14 @@ else
             }
             else
             {
-                ShowError(error);
+                ShowError(error); // נציג הודעה בהתאם לבעיה
             }
         }
     }
 
     void ShowError(string error)
     {
+        // מטרת הפונקציה להראות הערה בעברית בהתאם להערה באנגלית שקיבלנו מהשרת
         switch (error)
         {
             case "It's Not Your Game":

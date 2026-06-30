@@ -1108,10 +1108,10 @@
 /Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/obj/Debug/net10.0/scopedcss/Pages/Index.razor.rz.scp.css
 /Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/obj/Debug/net10.0/compressed/vltr9ihn5l-{0}-gs2e5tcs7o-gs2e5tcs7o.gz
 /Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/obj/Debug/net10.0/compressed/hg0ygfyyf6-{0}-gs2e5tcs7o-gs2e5tcs7o.gz
-/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/bin/Debug/net10.0/wwwroot/_framework/AuthTemplate.Client.k83grw5l2i.pdb
-/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/bin/Debug/net10.0/wwwroot/_framework/AuthTemplate.Client.rlh22jbjzu.wasm
-/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/bin/Debug/net10.0/wwwroot/_framework/AuthTemplate.Client.rlh22jbjzu.wasm.gz
-/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/bin/Debug/net10.0/wwwroot/_framework/AuthTemplate.Client.k83grw5l2i.pdb.gz
-/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/obj/Debug/net10.0/compressed/eqoczzabb7-{0}-rlh22jbjzu-rlh22jbjzu.gz
-/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/obj/Debug/net10.0/compressed/xoa82oevvl-{0}-k83grw5l2i-k83grw5l2i.gz
-/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/obj/Debug/net10.0/compressed/u6yfda54ch-{0}-zhlgonndxc-zhlgonndxc.gz
+/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/bin/Debug/net10.0/wwwroot/_framework/AuthTemplate.Client.p3whktfjsy.pdb
+/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/bin/Debug/net10.0/wwwroot/_framework/AuthTemplate.Client.warm64p4uk.wasm
+/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/bin/Debug/net10.0/wwwroot/_framework/AuthTemplate.Client.warm64p4uk.wasm.gz
+/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/bin/Debug/net10.0/wwwroot/_framework/AuthTemplate.Client.p3whktfjsy.pdb.gz
+/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/obj/Debug/net10.0/compressed/eqoczzabb7-{0}-warm64p4uk-warm64p4uk.gz
+/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/obj/Debug/net10.0/compressed/xoa82oevvl-{0}-p3whktfjsy-p3whktfjsy.gz
+/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/obj/Debug/net10.0/compressed/u6yfda54ch-{0}-c1f6qve3zm-c1f6qve3zm.gz
