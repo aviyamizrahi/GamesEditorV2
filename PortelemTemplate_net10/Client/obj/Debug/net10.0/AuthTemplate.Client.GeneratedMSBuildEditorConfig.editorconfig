@@ -76,10 +76,6 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9Ub29sdGlwLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/Pages/Index.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXMvSW5kZXgucmF6b3I=
-build_metadata.AdditionalFiles.CssScope = 
-
 [/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/_Imports.razor]
 build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
@@ -91,6 +87,10 @@ build_metadata.AdditionalFiles.CssScope = b-2lh46oy4mw
 [/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/Pages/GamesList.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXMvR2FtZXNMaXN0LnJhem9y
 build_metadata.AdditionalFiles.CssScope = b-eq42zsgdzv
+
+[/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/Pages/Index.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvSW5kZXgucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-58ga1vs9lc
 
 [/Users/aviyamizrahi/Documents/programing 2/Final Task/PortelemTemplate_net10/Client/Shared/MainLayout.razor]
 build_metadata.AdditionalFiles.TargetPath = U2hhcmVkL01haW5MYXlvdXQucmF6b3I=

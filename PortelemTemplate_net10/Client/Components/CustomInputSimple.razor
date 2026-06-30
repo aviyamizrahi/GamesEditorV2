@@ -106,11 +106,12 @@
         }
     }
     
-    async Task ClearValue() // ניקוי של הערך בלחיצה על כפתור איקס 
+    public async Task ClearValue() // ניקוי של הערך בלחיצה על כפתור איקס 
     {
+        Console.WriteLine("HandleTextClear נקרא");
+
         await ValueChanged.InvokeAsync("");
         length = 0;
-        inputClass = "danger-input";
     }
 
 }

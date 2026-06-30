@@ -81,6 +81,8 @@
 }
 
 /* ״איך משחקים״ פופאפ */
+/* העיצוב חל גם על הפופ אפ של ״אודות״ */
+
 .how-to-play-overlay[b-juk25fujaf] {
     position: fixed;
     top: 0;

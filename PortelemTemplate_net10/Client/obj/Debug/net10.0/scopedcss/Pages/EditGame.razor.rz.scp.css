@@ -183,6 +183,7 @@
     direction: rtl;
     max-height: 250px; /* גובה של 2 שורות פריטים */
     overflow-y: auto;
+    scrollbar-color: #707070 #F6F2EB;
     scroll-behavior: smooth;
 }
 

@@ -184,6 +184,7 @@
     direction: rtl;
     max-height: 250px; /* גובה של 2 שורות פריטים */
     overflow-y: auto;
+    scrollbar-color: #707070 #F6F2EB;
     scroll-behavior: smooth;
 }
 
@@ -440,6 +441,20 @@ table[b-eq42zsgdzv] {
     margin: 0;
 }
 
+/* /Pages/Index.razor.rz.scp.css */
+.game-wrapper[b-58ga1vs9lc] {
+    display: inline-block;
+    padding: 20px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.game-container[b-58ga1vs9lc] {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 /* /Shared/MainLayout.razor.rz.scp.css */
 .content[b-blyqc8ygrt] {
     padding: 1rem;
@@ -537,6 +552,8 @@ table[b-eq42zsgdzv] {
 }
 
 /* ״איך משחקים״ פופאפ */
+/* העיצוב חל גם על הפופ אפ של ״אודות״ */
+
 .how-to-play-overlay[b-juk25fujaf] {
     position: fixed;
     top: 0;
